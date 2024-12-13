@@ -9,6 +9,7 @@ export class ServiceManager extends EventEmitter {
   private static instance: ServiceManager;
   private isInitializing: boolean = false;
   private initPromise: Promise<void> | null = null;
+  private mongoose: Awaited<ReturnType<typeof connectDB>> | null = null;
 
   private constructor() {
     super();
@@ -54,7 +55,7 @@ export class ServiceManager extends EventEmitter {
       logger.info('Initializing services...');
 
       // Initialize services sequentially to avoid connection conflicts
-      await connectDB();
+      this.mongoose = await connectDB();
       logger.info('MongoDB connected');
 
       await Redis.connect();
@@ -77,8 +78,8 @@ export class ServiceManager extends EventEmitter {
       const shutdownPromises = [
         RabbitMQ.disconnect(),
         Redis.disconnect(),
-        connectDB().then((mongoose) => mongoose.connection.close()),
-      ];
+        this.mongoose?.connection.close(),
+      ].filter((promise): promise is Promise<void> => promise !== undefined);
 
       await Promise.allSettled(shutdownPromises);
       logger.info('All services shut down successfully');
