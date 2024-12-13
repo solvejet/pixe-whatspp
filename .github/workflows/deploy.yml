@@ -71,13 +71,22 @@ jobs:
       env:
         NODE_ENV: production
 
-    - name: Upload build artifact
+    - name: Upload build files
       uses: actions/upload-artifact@v4
       with:
-        name: dist
-        path: dist/
+        name: build-files
+        path: |
+          ./**/*.js
+          ./**/*.js.map
+          package.json
+          pnpm-lock.yaml
         retention-days: 1
         compression-level: 9
+        exclude: |
+          **/node_modules/**
+          **/.git/**
+          **/src/**
+          **/test/**
 
   deploy:
     needs: build
@@ -85,16 +94,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-    - name: Download build artifact
+    - name: Download build files
       uses: actions/download-artifact@v4
       with:
-        name: dist
-        path: dist/
+        name: build-files
 
-    - name: Setup production files
-      run: |
-        cp package.json dist/
-        cp pnpm-lock.yaml dist/
+    - name: List files before deploy
+      run: ls -la
 
     - name: Deploy to FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -102,7 +108,7 @@ jobs:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./dist/
+        local-dir: ./
         server-dir: /
         dangerous-clean-slate: true
         security: strict
@@ -118,8 +124,6 @@ jobs:
       run: |
         echo "Deployment completed successfully"
         echo "Timestamp: $(date -u)"
-      env:
-        DEPLOY_TIME: ${{ steps.deploy.outputs.time }}
 
     - name: Notify on failure
       if: failure()
