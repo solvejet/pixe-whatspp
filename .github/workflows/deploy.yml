@@ -2,137 +2,54 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   NODE_VERSION: 20.x
   PNPM_VERSION: 8
-  NODE_ENV: production
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        persist-credentials: false
-
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: ${{ env.PNPM_VERSION }}
-        run_install: false
-
-    - name: Setup Node.js ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
-        cache-dependency-path: '**/pnpm-lock.yaml'
-
-    - name: Install dependencies
-      run: |
-        echo "Installing dependencies and generating lockfile..."
-        if [ ! -f "pnpm-lock.yaml" ]; then
-          echo "No lockfile found, installing dependencies normally..."
-          pnpm install
-        else
-          echo "Checking lockfile compatibility..."
-          if ! pnpm install --frozen-lockfile; then
-            echo "Lockfile is incompatible, regenerating..."
-            rm -f pnpm-lock.yaml
-            pnpm install
-          fi
-        fi
-      
-    - name: Type check
-      run: pnpm exec tsc --noEmit
-      
-    - name: Lint
-      run: pnpm run lint:check
-
-    - name: Build
-      run: pnpm run build
-      env:
-        NODE_ENV: production
-
-    - name: Prepare artifacts
-      run: |
-        mkdir -p artifact
-        cp -r dist/* artifact/ || true  # Use true to prevent failure if dist is empty
-        cp package.json artifact/
-        cp pnpm-lock.yaml artifact/
-
-    - name: Upload build files
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-files
-        path: artifact
-        retention-days: 1
-        compression-level: 9
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: production
 
     steps:
-    - name: Download build files
-      uses: actions/download-artifact@v4
-      with:
-        name: build-files
-        path: ./dist
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: List files before deploy
-      run: |
-        echo "Contents of deployment directory:"
-        ls -la ./dist
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
 
-    - name: Deploy to FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./dist/
-        server-dir: /
-        dangerous-clean-slate: true
-        security: strict
-        timeout: 120000
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          **/test/**
-          **/*.test.*
-          **/*.spec.*
-          README.md
-          .env*
-          .eslintrc*
-          .prettierrc*
-          tsconfig.json
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    - name: Verify deployment
-      if: success()
-      run: |
-        echo "✅ Deployment completed successfully"
-        echo "Deployment timestamp: $(date -u)"
-        echo "Environment: production"
+      - name: Install dependencies
+        run: pnpm install
 
-    - name: Notify on failure
-      if: failure()
-      run: |
-        echo "❌ Deployment failed"
-        echo "Failure timestamp: $(date -u)"
-        echo "Please check the logs for more information"
+      - name: Lint check
+        run: pnpm run lint:check
 
-    - name: Cleanup
-      if: always()
-      run: |
-        rm -rf ./dist
+      - name: Build
+        run: pnpm run build
+        env:
+          NODE_ENV: production
+
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /
+          dangerous-clean-slate: true
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf ./dist
