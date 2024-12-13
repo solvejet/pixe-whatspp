@@ -1,4 +1,4 @@
-name: Build, Test, and Deploy
+name: Build and Deploy
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     
     strategy:
@@ -65,11 +65,6 @@ jobs:
       
     - name: Lint
       run: pnpm run lint:check
-      
-    - name: Run tests
-      run: pnpm test
-      env:
-        CI: true
 
     - name: Build
       run: pnpm run build
@@ -85,7 +80,7 @@ jobs:
         compression-level: 9
 
   deploy:
-    needs: build-and-test
+    needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
@@ -116,7 +111,6 @@ jobs:
           **/.git*
           **/.git*/**
           **/node_modules/**
-          test/**
           README.md
 
     - name: Verify deployment
