@@ -10,6 +10,8 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node --experimental-specifier-resolution=node dist/server.js",
     "build": "rimraf dist && tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "prebuild": "rimraf dist",
+    "postbuild": "echo 'Build completed'",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "lint:check": "eslint \"src/**/*.ts\"",

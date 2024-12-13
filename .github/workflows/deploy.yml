@@ -2,131 +2,140 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  NODE_VERSION: 20.x
+  PNPM_VERSION: 8
+  NODE_ENV: production
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        node-version: [20.x]
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
 
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 8
-        run_install: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
 
-    - name: Get pnpm store directory
-      id: pnpm-cache
-      shell: bash
-      run: |
-        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-    - name: Setup pnpm cache
-      uses: actions/cache@v4
-      with:
-        path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-store-
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
-    - name: Install dependencies and generate lockfile
-      run: |
-        rm -f pnpm-lock.yaml
-        pnpm install
-        pnpm install --lockfile-only
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
 
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          node_modules
-          ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-
+      - name: Type check
+        run: pnpm exec tsc --noEmit
 
-    - name: Type check
-      run: pnpm exec tsc --noEmit
-      
-    - name: Lint
-      run: pnpm run lint:check
+      - name: Lint
+        run: pnpm run lint:check
 
-    - name: Build
-      run: pnpm run build
-      env:
-        NODE_ENV: production
+      - name: Build
+        run: pnpm run build
+        env:
+          NODE_ENV: production
 
-    - name: Upload build files
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-files
-        path: |
-          ./**/*.js
-          ./**/*.js.map
-          package.json
-          pnpm-lock.yaml
-        retention-days: 1
-        compression-level: 9
-        exclude: |
-          **/node_modules/**
-          **/.git/**
-          **/src/**
-          **/test/**
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifact
+          cp -r dist/* artifact/
+          cp package.json artifact/
+          cp pnpm-lock.yaml artifact/
+
+      - name: Upload build files
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: artifact
+          retention-days: 1
+          compression-level: 9
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    environment: production
 
     steps:
-    - name: Download build files
-      uses: actions/download-artifact@v4
-      with:
-        name: build-files
+      - name: Download build files
+        uses: actions/download-artifact@v4
+        with:
+          name: build-files
+          path: ./dist
 
-    - name: List files before deploy
-      run: ls -la
+      - name: List files before deploy
+        run: |
+          echo "Contents of deployment directory:"
+          ls -la ./dist
 
-    - name: Deploy to FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./
-        server-dir: /
-        dangerous-clean-slate: true
-        security: strict
-        timeout: 120000
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          README.md
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /
+          dangerous-clean-slate: true
+          security: strict
+          timeout: 120000
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/test/**
+            **/*.test.*
+            **/*.spec.*
+            README.md
+            .env*
+            .eslintrc*
+            .prettierrc*
+            tsconfig.json
 
-    - name: Verify deployment
-      if: success()
-      run: |
-        echo "Deployment completed successfully"
-        echo "Timestamp: $(date -u)"
+      - name: Verify deployment
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully"
+          echo "Deployment timestamp: $(date -u)"
+          echo "Environment: production"
 
-    - name: Notify on failure
-      if: failure()
-      run: |
-        echo "Deployment failed"
-        echo "Please check the logs for more information"
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed"
+          echo "Failure timestamp: $(date -u)"
+          echo "Please check the logs for more information"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf ./dist
