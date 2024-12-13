@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
@@ -29,6 +31,7 @@ jobs:
         run_install: false
 
     - name: Get pnpm store directory
+      id: pnpm-cache
       shell: bash
       run: |
         echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
@@ -37,18 +40,36 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.STORE_PATH }}
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+    - name: Install dependencies and generate lockfile
+      run: |
+        rm -f pnpm-lock.yaml
+        pnpm install
+        pnpm install --lockfile-only
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
 
     - name: Type check
       run: pnpm exec tsc --noEmit
-
+      
     - name: Lint
       run: pnpm run lint:check
+      
+    - name: Run tests
+      run: pnpm test
+      env:
+        CI: true
 
     - name: Build
       run: pnpm run build
@@ -61,6 +82,7 @@ jobs:
         name: dist
         path: dist/
         retention-days: 1
+        compression-level: 9
 
   deploy:
     needs: build-and-test
@@ -74,6 +96,11 @@ jobs:
         name: dist
         path: dist/
 
+    - name: Setup production files
+      run: |
+        cp package.json dist/
+        cp pnpm-lock.yaml dist/
+
     - name: Deploy to FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -81,7 +108,27 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./dist/
-        server-dir: / # Changed to root directory
-        dangerous-clean-slate: true # This will clean the root directory before uploading
+        server-dir: /
+        dangerous-clean-slate: true
         security: strict
-        timeout: 60000 # Added longer timeout for root directory operations
+        timeout: 120000
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          test/**
+          README.md
+
+    - name: Verify deployment
+      if: success()
+      run: |
+        echo "Deployment completed successfully"
+        echo "Timestamp: $(date -u)"
+      env:
+        DEPLOY_TIME: ${{ steps.deploy.outputs.time }}
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "Deployment failed"
+        echo "Please check the logs for more information"

@@ -37,6 +37,7 @@
     "morgan": "^1.10.0",
     "qs": "^6.13.1",
     "redis": "^4.7.0",
+    "ua-parser-js": "^2.0.0",
     "winston": "^3.17.0"
   },
   "devDependencies": {
@@ -52,6 +53,7 @@
     "@types/node": "^22.10.2",
     "@types/qs": "^6.9.17",
     "@types/supertest": "^6.0.2",
+    "@types/ua-parser-js": "^0.7.39",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
     "cross-env": "^7.0.3",
