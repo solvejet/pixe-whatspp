@@ -16,7 +16,9 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "migrate": "tsx src/scripts/migrate.ts",
+    "migrate:fresh": "tsx src/scripts/migrate.ts --fresh"
   },
   "keywords": [],
   "author": "karansxa",
