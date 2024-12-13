@@ -23,15 +23,8 @@
     "preserveConstEnums": true,
     "paths": {
       "@/*": ["src/*"]
-    },
-    "typeRoots": ["./node_modules/@types", "./src/types"],
-    "removeComments": true,
-    "allowSyntheticDefaultImports": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "incremental": true,
-    "stripInternal": true
+    }
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "coverage", "**/*.spec.ts", "**/*.test.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "coverage"]
 }
