@@ -9,6 +9,7 @@ const roleSchema = new Schema<IRole>(
       required: true,
       unique: true,
       trim: true,
+      index: true, // Add index for better query performance
     },
     description: {
       type: String,
@@ -25,5 +26,8 @@ const roleSchema = new Schema<IRole>(
     timestamps: true,
   },
 );
+
+// Add compound index for common queries
+roleSchema.index({ name: 1, createdAt: -1 });
 
 export const RoleModel = model<IRole>('Role', roleSchema);

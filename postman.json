@@ -1,0 +1,355 @@
+{
+    "info": {
+      "name": "Backend API",
+      "description": "High-Performance Node.js TypeScript Backend API Collection",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Authentication",
+        "item": [
+          {
+            "name": "Register",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"roles\": [\"user\"]\n}"
+              },
+              "url": {
+                "raw": "localhost:4000/api/v1/auth/register",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "auth", "register"]
+              },
+              "description": "Register a new user (requires admin token for admin/staff roles)"
+            }
+          },
+          {
+            "name": "Login",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\"\n}"
+              },
+              "url": {
+                "raw": "localhost:4000/api/v1/auth/login",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "auth", "login"]
+              }
+            }
+          },
+          {
+            "name": "Refresh Token",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+              },
+              "url": {
+                "raw": "localhost:4000/api/v1/auth/refresh-token",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "auth", "refresh-token"]
+              }
+            }
+          },
+          {
+            "name": "Logout",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+              },
+              "url": {
+                "raw": "localhost:4000/api/v1/auth/logout",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "auth", "logout"]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "Customers",
+        "item": [
+          {
+            "name": "Get Schema",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "url": {
+                "raw": "localhost:4000/api/v1/customers/schema",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "customers", "schema"]
+              },
+              "description": "Get current customer schema (admin only)"
+            }
+          },
+          {
+            "name": "Update Schema",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"fields\": [\n        {\n            \"name\": \"name\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"isDefault\": true,\n            \"description\": \"Customer name\"\n        },\n        {\n            \"name\": \"phoneNumber\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"isDefault\": true,\n            \"description\": \"Customer phone number\"\n        },\n        {\n            \"name\": \"assignedAdmin\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"isDefault\": true,\n            \"description\": \"Assigned administrator\"\n        },\n        {\n            \"name\": \"vehicleType\",\n            \"type\": \"select\",\n            \"required\": true,\n            \"options\": [\"Car\", \"Bike\", \"Truck\"],\n            \"description\": \"Type of vehicle\"\n        }\n    ]\n}"
+              },
+              "url": {
+                "raw": "localhost:4000/api/v1/customers/schema",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "customers", "schema"]
+              },
+              "description": "Update customer schema (admin only)"
+            }
+          },
+          {
+            "name": "Create Customer",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"John Smith\",\n    \"phoneNumber\": {\n        \"countryCode\": \"+1\",\n        \"number\": \"1234567890\"\n    },\n    \"assignedAdmin\": \"{{adminUserId}}\",\n    \"customFields\": {\n        \"vehicleType\": \"Car\"\n    }\n}"
+              },
+              "url": {
+                "raw": "localhost:4000/api/v1/customers",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "customers"]
+              },
+              "description": "Create new customer (admin/staff only)"
+            }
+          },
+          {
+            "name": "Get Customers",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "url": {
+                "raw": "localhost:4000/api/v1/customers?page=1&limit=10",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "customers"],
+                "query": [
+                  {
+                    "key": "page",
+                    "value": "1"
+                  },
+                  {
+                    "key": "limit",
+                    "value": "10"
+                  }
+                ]
+              },
+              "description": "Get customers list with pagination (admin/staff only)"
+            }
+          },
+          {
+            "name": "Get Customer",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "url": {
+                "raw": "localhost:4000/api/v1/customers/{{customerId}}",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "customers", "{{customerId}}"]
+              },
+              "description": "Get customer by ID (admin/staff only)"
+            }
+          },
+          {
+            "name": "Update Customer",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n    \"name\": \"John Smith Updated\",\n    \"customFields\": {\n        \"vehicleType\": \"Truck\"\n    }\n}"
+              },
+              "url": {
+                "raw": "localhost:4000/api/v1/customers/{{customerId}}",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "customers", "{{customerId}}"]
+              },
+              "description": "Update customer (admin/staff only)"
+            }
+          },
+          {
+            "name": "Delete Customer",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "url": {
+                "raw": "localhost:4000/api/v1/customers/{{customerId}}",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "v1", "customers", "{{customerId}}"]
+              },
+              "description": "Delete customer (admin only)"
+            }
+          }
+        ]
+      },
+      {
+        "name": "System",
+        "item": [
+          {
+            "name": "Health Check",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "localhost:4000/api/health",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "health"]
+              },
+              "description": "System health check endpoint"
+            }
+          },
+          {
+            "name": "System Info",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{accessToken}}",
+                  "type": "text"
+                }
+              ],
+              "url": {
+                "raw": "localhost:4000/api/system-info",
+                "host": ["localhost"],
+                "port": "4000",
+                "path": ["api", "system-info"]
+              },
+              "description": "Get system information (admin only)"
+            }
+          }
+        ]
+      }
+    ],
+    "variable": [
+      {
+        "key": "accessToken",
+        "value": "your_access_token_here"
+      },
+      {
+        "key": "refreshToken",
+        "value": "your_refresh_token_here"
+      },
+      {
+        "key": "adminUserId",
+        "value": "admin_user_id_here"
+      },
+      {
+        "key": "customerId",
+        "value": "customer_id_here"
+      }
+    ]
+  }

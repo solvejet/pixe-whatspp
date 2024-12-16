@@ -1,8 +1,10 @@
 // src/services/auth.service.ts
 import jwt from 'jsonwebtoken';
 import { Types } from 'mongoose';
+import { env } from '@/config/env.js';
 import { UserModel } from '@/models/user.model.js';
 import { RoleModel } from '@/models/role.model.js';
+import { logger } from '@/utils/logger.js';
 import { ApiError } from '@/middleware/error-handler.js';
 import type {
   IUserDocument,
@@ -14,10 +16,10 @@ import type {
 import { Redis } from '@/config/redis.js';
 
 export class AuthService {
-  private readonly JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-  private readonly JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret';
-  private readonly JWT_EXPIRES_IN = '15m';
-  private readonly JWT_REFRESH_EXPIRES_IN = '7d';
+  private readonly JWT_SECRET = env.JWT_SECRET;
+  private readonly JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
+  private readonly JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
+  private readonly JWT_REFRESH_EXPIRES_IN = env.JWT_REFRESH_EXPIRES_IN;
   private readonly MAX_LOGIN_ATTEMPTS = 5;
   private readonly LOCK_TIME = 15 * 60; // 15 minutes in seconds
 
@@ -36,9 +38,21 @@ export class AuthService {
     };
   }
 
+  private async syncUserPermissions(user: IUserDocument): Promise<void> {
+    await user.syncPermissions();
+    await user.save();
+  }
+
   async login(email: string, password: string): Promise<ILoginResponse> {
     const user = await UserModel.findOne({ email }).select('+password');
-    if (!user || !user.isActive) {
+
+    if (!user) {
+      logger.debug(`No user found with email: ${email}`);
+      throw new ApiError(401, 'Invalid credentials');
+    }
+
+    if (!user.isActive) {
+      logger.debug(`User ${email} account is inactive`);
       throw new ApiError(401, 'Invalid credentials');
     }
 
@@ -48,12 +62,15 @@ export class AuthService {
     const isLocked = await Redis.get(lockKey);
 
     if (isLocked) {
+      logger.debug(`Account ${email} is locked`);
       throw new ApiError(423, 'Account is temporarily locked. Please try again later.');
     }
 
     const isValidPassword = await user.comparePassword(password);
+
     if (!isValidPassword) {
       const currentAttempts = parseInt(attempts) + 1;
+      logger.debug(`Failed login attempt ${currentAttempts} for ${email}`);
 
       if (currentAttempts >= this.MAX_LOGIN_ATTEMPTS) {
         await Redis.set(lockKey, '1', this.LOCK_TIME);
@@ -74,6 +91,7 @@ export class AuthService {
     await user.save();
 
     const tokens = await this.generateTokens(user);
+
     return {
       ...tokens,
       user: this.formatUserResponse(user),
@@ -97,6 +115,9 @@ export class AuthService {
       roles: userData.roles || ['user'],
       permissions: [],
     });
+
+    // Sync permissions after creation
+    await this.syncUserPermissions(newUser);
 
     const tokens = await this.generateTokens(newUser);
     return {
@@ -139,7 +160,7 @@ export class AuthService {
   private async generateTokens(
     user: IUserDocument,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const roles = await RoleModel.find({ _id: { $in: user.roles } });
+    const roles = await RoleModel.find({ name: { $in: user.roles } });
     const permissions = roles.flatMap((role) => role.permissions);
 
     const tokenPayload: ITokenPayload = {

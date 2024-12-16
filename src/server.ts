@@ -1,4 +1,6 @@
-// src/server.ts
+// Load environment configuration first
+import { env } from '@/config/env.js';
+
 import cluster from 'cluster';
 import type { Worker } from 'cluster';
 import os from 'os';
@@ -24,11 +26,12 @@ class ServerManager {
   private startupTimeout: NodeJS.Timeout | null;
 
   constructor() {
-    // Initialize server configuration
-    this.port = Number(process.env.PORT) || 3000;
+    // Initialize server configuration using environment variables
+    this.port = env.PORT;
     const availableCPUs = os.cpus().length;
-    const maxWorkersEnv = Number(process.env.MAX_WORKERS);
-    this.numCPUs = maxWorkersEnv > 0 ? Math.min(maxWorkersEnv, availableCPUs) : availableCPUs;
+
+    // Handle MAX_WORKERS with proper type checking
+    this.numCPUs = this.calculateWorkerCount(availableCPUs);
 
     // Initialize server state
     this.server = null;
@@ -37,10 +40,25 @@ class ServerManager {
     this.healthCheckTimers = new Map();
     this.startupTimeout = null;
 
-    // Configure timeouts
-    this.shutdownTimeout = Number(process.env.SHUTDOWN_TIMEOUT) || 30000;
-    this.healthCheckInterval = Number(process.env.HEALTH_CHECK_INTERVAL) || 30000;
-    this.healthCheckTimeout = Number(process.env.HEALTH_CHECK_TIMEOUT) || 5000;
+    // Configure timeouts from environment
+    this.shutdownTimeout = env.SHUTDOWN_TIMEOUT;
+    this.healthCheckInterval = env.HEALTH_CHECK_INTERVAL;
+    this.healthCheckTimeout = env.HEALTH_CHECK_TIMEOUT;
+  }
+
+  /**
+   * Calculate the number of worker processes to use
+   */
+  private calculateWorkerCount(availableCPUs: number): number {
+    const maxWorkersEnv = env.MAX_WORKERS;
+
+    // If MAX_WORKERS is not set or is 0, use available CPUs
+    if (!maxWorkersEnv || maxWorkersEnv <= 0) {
+      return availableCPUs;
+    }
+
+    // Use the minimum of MAX_WORKERS and available CPUs
+    return Math.min(maxWorkersEnv, availableCPUs);
   }
 
   /**
@@ -133,7 +151,9 @@ class ServerManager {
 
     logger.info('System Information:');
     logger.info(
-      `Memory - Total: ${this.formatBytes(totalMemory)}, Used: ${this.formatBytes(usedMemory)}, Free: ${this.formatBytes(freeMemory)}`,
+      `Memory - Total: ${this.formatBytes(totalMemory)}, Used: ${this.formatBytes(
+        usedMemory,
+      )}, Free: ${this.formatBytes(freeMemory)}`,
     );
     logger.info(`Architecture: ${os.arch()}`);
     logger.info(`Platform: ${os.platform()}`);

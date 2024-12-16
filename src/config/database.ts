@@ -1,14 +1,12 @@
-// src/config/database.ts
 import mongoose from 'mongoose';
+import { env } from '@/config/env.js';
 import { logger } from '@/utils/logger.js';
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/your-database';
 
 export const connectDB = async (): Promise<typeof mongoose> => {
   try {
     const options = {
       autoIndex: true,
-      maxPoolSize: 10,
+      maxPoolSize: env.MONGODB_POOL_SIZE,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
       family: 4,
@@ -52,7 +50,7 @@ export const connectDB = async (): Promise<typeof mongoose> => {
     process.on('SIGTERM', terminateServer);
     process.on('SIGUSR2', terminateServer); // Nodemon restart
 
-    await mongoose.connect(MONGODB_URI, options);
+    await mongoose.connect(env.MONGODB_URI, options);
     return mongoose;
   } catch (error) {
     logger.error('Failed to connect to MongoDB:', error);

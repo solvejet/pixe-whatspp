@@ -180,7 +180,7 @@ pnpm dev
 ```env
 # Server
 NODE_ENV=development
-PORT=3000
+PORT=4000
 API_VERSION=v1
 
 # Database
@@ -248,12 +248,12 @@ pnpm deps:update   # Update dependencies
 ```bash
 # Get current schema
 curl -X GET \
-  'http://localhost:3000/api/v1/customers/schema' \
+  'http://localhost:4000/api/v1/customers/schema' \
   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
 
 # Update schema
 curl -X PUT \
-  'http://localhost:3000/api/v1/customers/schema' \
+  'http://localhost:4000/api/v1/customers/schema' \
   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -279,7 +279,7 @@ curl -X PUT \
 ```bash
 # Create customer
 curl -X POST \
-  'http://localhost:3000/api/v1/customers' \
+  'http://localhost:4000/api/v1/customers' \
   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -296,7 +296,7 @@ curl -X POST \
 
 # Get customers with pagination
 curl -X GET \
-  'http://localhost:3000/api/v1/customers?page=1&limit=10' \
+  'http://localhost:4000/api/v1/customers?page=1&limit=10' \
   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
 ```
 
@@ -307,7 +307,7 @@ curl -X GET \
 | Authentication    | < 100ms       | 1000 req/s |
 | Database Query    | < 50ms        | 2000 req/s |
 | Cache Operation   | < 10ms        | 5000 req/s |
-| Message Queue     | < 30ms        | 3000 msg/s |
+| Message Queue     | < 30ms        | 4000 msg/s |
 | Customer Creation | < 150ms       | 800 req/s  |
 | Schema Update     | < 200ms       | 500 req/s  |
 

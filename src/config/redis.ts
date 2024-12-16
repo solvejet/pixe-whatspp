@@ -1,4 +1,5 @@
 // src/config/redis.ts
+import { env } from '@/config/env.js';
 import { createClient } from 'redis';
 import type { RedisClientType } from 'redis';
 import { logger } from '@/utils/logger.js';
@@ -10,7 +11,7 @@ class RedisService {
 
   constructor() {
     this.client = createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      url: env.REDIS_URL,
       socket: {
         reconnectStrategy: (retries: number): Error | number => {
           if (retries > 10) {

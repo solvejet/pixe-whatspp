@@ -2,6 +2,7 @@
 import { Schema, model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import type { IUserDocument } from '@/types/auth.js';
+import { RoleModel } from './role.model.js';
 
 const userSchema = new Schema<IUserDocument>(
   {
@@ -55,12 +56,25 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+// Add method to sync permissions
+userSchema.methods.syncPermissions = async function (): Promise<void> {
+  const roles = await RoleModel.find({ name: { $in: this.roles } });
+  this.permissions = [...new Set(roles.flatMap((role) => role.permissions))];
+};
 
+userSchema.pre('save', async function (next) {
   try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+    // Handle password hashing
+    if (this.isModified('password')) {
+      const salt = await bcrypt.genSalt(12);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+
+    // Sync permissions if roles have changed
+    if (this.isModified('roles')) {
+      await this.syncPermissions();
+    }
+
     next();
   } catch (error) {
     next(error as Error);
