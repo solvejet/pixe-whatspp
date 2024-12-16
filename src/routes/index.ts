@@ -3,6 +3,7 @@ import type { Router as ExpressRouter, Request, Response, NextFunction } from 'e
 import { Router } from 'express';
 import os from 'node:os';
 import authRoutes from './auth.routes.js';
+import customerRoutes from './customer.routes.js';
 import { auth, checkRole } from '@/middleware/auth.middleware.js';
 import { notFound, ApiError } from '@/middleware/error-handler.js';
 import { rateLimit } from 'express-rate-limit';
@@ -146,6 +147,9 @@ const API_VERSION = process.env.API_VERSION || '/v1';
 
 // Public routes (no authentication required)
 router.use(`${API_VERSION}/auth`, apiLimiter, authRoutes);
+
+// Protected routes
+router.use(`${API_VERSION}/customers`, apiLimiter, customerRoutes);
 
 // Catch-all route for undefined endpoints
 router.all('*', (req: Request, _res: Response, next: NextFunction) => {

@@ -130,6 +130,22 @@ graph TB
   - Error tracking
   - Audit trails
 
+### Customer Management
+
+- **Dynamic Schema Management**
+
+  - Flexible customer data model
+  - Custom field support
+  - Field type validation
+  - Schema versioning
+
+- **Customer Operations**
+  - CRUD operations
+  - Role-based access
+  - Audit logging
+  - Input validation
+  - Pagination and filtering
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -225,14 +241,75 @@ pnpm clean         # Clean build artifacts
 pnpm deps:update   # Update dependencies
 ```
 
+## 📡 API Examples
+
+### Customer Schema Management
+
+```bash
+# Get current schema
+curl -X GET \
+  'http://localhost:3000/api/v1/customers/schema' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+
+# Update schema
+curl -X PUT \
+  'http://localhost:3000/api/v1/customers/schema' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "fields": [
+      {
+        "name": "name",
+        "type": "string",
+        "required": true,
+        "isDefault": true
+      },
+      {
+        "name": "vehicleType",
+        "type": "select",
+        "required": true,
+        "options": ["Bike", "Car", "Truck"]
+      }
+    ]
+  }'
+```
+
+### Customer CRUD Operations
+
+```bash
+# Create customer
+curl -X POST \
+  'http://localhost:3000/api/v1/customers' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "John Doe",
+    "phoneNumber": {
+      "countryCode": "+1",
+      "number": "1234567890"
+    },
+    "assignedAdmin": "admin_id",
+    "customFields": {
+      "vehicleType": "Car"
+    }
+  }'
+
+# Get customers with pagination
+curl -X GET \
+  'http://localhost:3000/api/v1/customers?page=1&limit=10' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
 ## 📈 Performance Benchmarks
 
-| Operation       | Response Time | Throughput |
-| --------------- | ------------- | ---------- |
-| Authentication  | < 100ms       | 1000 req/s |
-| Database Query  | < 50ms        | 2000 req/s |
-| Cache Operation | < 10ms        | 5000 req/s |
-| Message Queue   | < 30ms        | 3000 msg/s |
+| Operation         | Response Time | Throughput |
+| ----------------- | ------------- | ---------- |
+| Authentication    | < 100ms       | 1000 req/s |
+| Database Query    | < 50ms        | 2000 req/s |
+| Cache Operation   | < 10ms        | 5000 req/s |
+| Message Queue     | < 30ms        | 3000 msg/s |
+| Customer Creation | < 150ms       | 800 req/s  |
+| Schema Update     | < 200ms       | 500 req/s  |
 
 ## 🔒 Security Practices
 
@@ -269,6 +346,8 @@ pnpm deps:update   # Update dependencies
 - Cache hit ratio
 - Queue depth
 - CPU & memory usage
+- Schema version changes
+- Customer operation stats
 
 ## 🤝 Contributing
 
