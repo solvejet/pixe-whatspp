@@ -4,13 +4,14 @@ import { RoleModel } from '@/models/role.model.js';
 import { logger } from '@/utils/logger.js';
 
 // Define permission types for better type safety
-type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'manage';
+type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'manage' | 'list' | 'statistics';
 type PermissionResource =
   | 'users'
   | 'roles'
   | 'permissions'
   | 'customers'
-  | 'audit_logs'
+  | 'customer-groups'
+  | 'audit-logs'
   | 'system'
   | 'settings';
 
@@ -129,23 +130,91 @@ export const createRolesAndPermissions = async (): Promise<void> => {
         action: 'delete',
       },
       {
+        name: 'customers:list',
+        description: 'List all customers',
+        resource: 'customers',
+        action: 'list',
+      },
+      {
+        name: 'customers:statistics',
+        description: 'View customer statistics',
+        resource: 'customers',
+        action: 'statistics',
+      },
+      {
+        name: 'customers:batch-update',
+        description: 'Perform batch updates on customers',
+        resource: 'customers',
+        action: 'manage',
+      },
+      {
         name: 'customers:manage',
         description: 'Full access to customer management',
         resource: 'customers',
         action: 'manage',
       },
 
-      // Audit Log Permissions
+      // Customer Group Permissions
       {
-        name: 'audit_logs:read',
-        description: 'View audit logs',
-        resource: 'audit_logs',
+        name: 'customer-groups:create',
+        description: 'Create customer groups',
+        resource: 'customer-groups',
+        action: 'create',
+      },
+      {
+        name: 'customer-groups:read',
+        description: 'View customer group information',
+        resource: 'customer-groups',
         action: 'read',
       },
       {
-        name: 'audit_logs:manage',
+        name: 'customer-groups:update',
+        description: 'Update customer group information',
+        resource: 'customer-groups',
+        action: 'update',
+      },
+      {
+        name: 'customer-groups:delete',
+        description: 'Delete customer groups',
+        resource: 'customer-groups',
+        action: 'delete',
+      },
+      {
+        name: 'customer-groups:list',
+        description: 'List all customer groups',
+        resource: 'customer-groups',
+        action: 'list',
+      },
+      {
+        name: 'customer-groups:manage-members',
+        description: 'Add or remove customers from groups',
+        resource: 'customer-groups',
+        action: 'manage',
+      },
+      {
+        name: 'customer-groups:manage',
+        description: 'Full access to customer group management',
+        resource: 'customer-groups',
+        action: 'manage',
+      },
+
+      // Audit Log Permissions
+      {
+        name: 'audit-logs:read',
+        description: 'View audit logs',
+        resource: 'audit-logs',
+        action: 'read',
+      },
+      {
+        name: 'audit-logs:list',
+        description: 'List audit logs',
+        resource: 'audit-logs',
+        action: 'list',
+      },
+      {
+        name: 'audit-logs:manage',
         description: 'Manage audit logs',
-        resource: 'audit_logs',
+        resource: 'audit-logs',
         action: 'manage',
       },
 
@@ -210,13 +279,24 @@ export const createRolesAndPermissions = async (): Promise<void> => {
       },
       {
         name: 'staff',
-        description: 'Staff member with limited access',
+        description: 'Staff member with customer management access',
         permissions: [
+          // Customer Management
           'customers:create',
           'customers:read',
           'customers:update',
+          'customers:list',
+          'customers:statistics',
+
+          // Customer Groups
+          'customer-groups:read',
+          'customer-groups:list',
+          'customer-groups:manage-members',
+
+          // Basic System Access
           'users:read',
-          'audit_logs:read',
+          'audit-logs:read',
+          'audit-logs:list',
           'system:read',
           'settings:read',
         ],
@@ -224,7 +304,13 @@ export const createRolesAndPermissions = async (): Promise<void> => {
       {
         name: 'user',
         description: 'Regular user with basic access',
-        permissions: ['customers:read', 'settings:read'],
+        permissions: [
+          'customers:read',
+          'customers:list',
+          'customer-groups:read',
+          'customer-groups:list',
+          'settings:read',
+        ],
       },
     ];
 
