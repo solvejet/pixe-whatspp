@@ -1,355 +1,920 @@
 {
-    "info": {
-      "name": "Backend API",
-      "description": "High-Performance Node.js TypeScript Backend API Collection",
-      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  "info": {
+    "_postman_id": "7a7e0f9c-8e8c-4d2f-9e2e-6f9c8e8c4d2f",
+    "name": "Backend API",
+    "description": "Complete API documentation for the Backend service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api/v1",
+      "type": "string"
     },
-    "item": [
-      {
-        "name": "Authentication",
-        "item": [
-          {
-            "name": "Register",
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                },
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\",\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"roles\": [\"user\"]\n}"
-              },
-              "url": {
-                "raw": "localhost:4000/api/v1/auth/register",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "auth", "register"]
-              },
-              "description": "Register a new user (requires admin token for admin/staff roles)"
-            }
-          },
-          {
-            "name": "Login",
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\"\n}"
-              },
-              "url": {
-                "raw": "localhost:4000/api/v1/auth/login",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "auth", "login"]
-              }
-            }
-          },
-          {
-            "name": "Refresh Token",
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
-              },
-              "url": {
-                "raw": "localhost:4000/api/v1/auth/refresh-token",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "auth", "refresh-token"]
-              }
-            }
-          },
-          {
-            "name": "Logout",
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                },
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
-              },
-              "url": {
-                "raw": "localhost:4000/api/v1/auth/logout",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "auth", "logout"]
-              }
-            }
-          }
-        ]
-      },
-      {
-        "name": "Customers",
-        "item": [
-          {
-            "name": "Get Schema",
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "localhost:4000/api/v1/customers/schema",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "customers", "schema"]
-              },
-              "description": "Get current customer schema (admin only)"
-            }
-          },
-          {
-            "name": "Update Schema",
-            "request": {
-              "method": "PUT",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                },
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"fields\": [\n        {\n            \"name\": \"name\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"isDefault\": true,\n            \"description\": \"Customer name\"\n        },\n        {\n            \"name\": \"phoneNumber\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"isDefault\": true,\n            \"description\": \"Customer phone number\"\n        },\n        {\n            \"name\": \"assignedAdmin\",\n            \"type\": \"string\",\n            \"required\": true,\n            \"isDefault\": true,\n            \"description\": \"Assigned administrator\"\n        },\n        {\n            \"name\": \"vehicleType\",\n            \"type\": \"select\",\n            \"required\": true,\n            \"options\": [\"Car\", \"Bike\", \"Truck\"],\n            \"description\": \"Type of vehicle\"\n        }\n    ]\n}"
-              },
-              "url": {
-                "raw": "localhost:4000/api/v1/customers/schema",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "customers", "schema"]
-              },
-              "description": "Update customer schema (admin only)"
-            }
-          },
-          {
-            "name": "Create Customer",
-            "request": {
-              "method": "POST",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                },
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"name\": \"John Smith\",\n    \"phoneNumber\": {\n        \"countryCode\": \"+1\",\n        \"number\": \"1234567890\"\n    },\n    \"assignedAdmin\": \"{{adminUserId}}\",\n    \"customFields\": {\n        \"vehicleType\": \"Car\"\n    }\n}"
-              },
-              "url": {
-                "raw": "localhost:4000/api/v1/customers",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "customers"]
-              },
-              "description": "Create new customer (admin/staff only)"
-            }
-          },
-          {
-            "name": "Get Customers",
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "localhost:4000/api/v1/customers?page=1&limit=10",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "customers"],
-                "query": [
-                  {
-                    "key": "page",
-                    "value": "1"
-                  },
-                  {
-                    "key": "limit",
-                    "value": "10"
-                  }
-                ]
-              },
-              "description": "Get customers list with pagination (admin/staff only)"
-            }
-          },
-          {
-            "name": "Get Customer",
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "localhost:4000/api/v1/customers/{{customerId}}",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "customers", "{{customerId}}"]
-              },
-              "description": "Get customer by ID (admin/staff only)"
-            }
-          },
-          {
-            "name": "Update Customer",
-            "request": {
-              "method": "PUT",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json",
-                  "type": "text"
-                },
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "body": {
-                "mode": "raw",
-                "raw": "{\n    \"name\": \"John Smith Updated\",\n    \"customFields\": {\n        \"vehicleType\": \"Truck\"\n    }\n}"
-              },
-              "url": {
-                "raw": "localhost:4000/api/v1/customers/{{customerId}}",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "customers", "{{customerId}}"]
-              },
-              "description": "Update customer (admin/staff only)"
-            }
-          },
-          {
-            "name": "Delete Customer",
-            "request": {
-              "method": "DELETE",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "localhost:4000/api/v1/customers/{{customerId}}",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "v1", "customers", "{{customerId}}"]
-              },
-              "description": "Delete customer (admin only)"
-            }
-          }
-        ]
-      },
-      {
-        "name": "System",
-        "item": [
-          {
-            "name": "Health Check",
-            "request": {
-              "method": "GET",
-              "url": {
-                "raw": "localhost:4000/api/health",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "health"]
-              },
-              "description": "System health check endpoint"
-            }
-          },
-          {
-            "name": "System Info",
-            "request": {
-              "method": "GET",
-              "header": [
-                {
-                  "key": "Authorization",
-                  "value": "Bearer {{accessToken}}",
-                  "type": "text"
-                }
-              ],
-              "url": {
-                "raw": "localhost:4000/api/system-info",
-                "host": ["localhost"],
-                "port": "4000",
-                "path": ["api", "system-info"]
-              },
-              "description": "Get system information (admin only)"
-            }
-          }
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Add current timestamp to request body if needed",
+          "if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "    const body = JSON.parse(pm.request.body.raw);",
+          "    if (body.timestamp === '{{$timestamp}}') {",
+          "        body.timestamp = new Date().toISOString();",
+          "        pm.request.body.raw = JSON.stringify(body);",
+          "    }",
+          "}"
         ]
       }
-    ],
-    "variable": [
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
       {
-        "key": "accessToken",
-        "value": "your_access_token_here"
-      },
-      {
-        "key": "refreshToken",
-        "value": "your_refresh_token_here"
-      },
-      {
-        "key": "adminUserId",
-        "value": "admin_user_id_here"
-      },
-      {
-        "key": "customerId",
-        "value": "customer_id_here"
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
       }
     ]
-  }
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    pm.expect(jsonData.data).to.have.property('refreshToken');",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "",
+                  "    // Store tokens for subsequent requests",
+                  "    pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\",\n    \"deviceInfo\": {\n        \"deviceId\": \"test-device\",\n        \"deviceType\": \"web\",\n        \"platform\": \"web\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register a new user"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has required properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    pm.expect(jsonData.data).to.have.property('refreshToken');",
+                  "    pm.expect(jsonData.data).to.have.property('user');",
+                  "",
+                  "    // Store tokens for subsequent requests",
+                  "    pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123!\",\n    \"deviceInfo\": {\n        \"deviceId\": \"test-device\",\n        \"deviceType\": \"web\",\n        \"platform\": \"web\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login with user credentials"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has new tokens\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    pm.expect(jsonData.data).to.have.property('refreshToken');",
+                  "",
+                  "    // Update stored tokens",
+                  "    pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh-token"
+              ]
+            },
+            "description": "Refresh access token using refresh token"
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Logout successful\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data.success).to.be.true;",
+                  "",
+                  "    // Clear stored tokens",
+                  "    pm.environment.set('accessToken', '');",
+                  "    pm.environment.set('refreshToken', '');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\",\n    \"allDevices\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout user and invalidate tokens"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Customer created successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    ",
+                  "    // Store customer ID for subsequent requests",
+                  "    pm.environment.set('customerId', jsonData.data.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Doe\",\n    \"phoneNumber\": \"+1234567890\",\n    \"countryCode\": \"US\",\n    \"assignedAdmin\": \"{{userId}}\",\n    \"status\": \"active\",\n    \"customFields\": {\n        \"company\": \"Acme Inc\",\n        \"position\": \"Manager\"\n    },\n    \"tags\": [\"vip\", \"enterprise\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers"
+              ]
+            },
+            "description": "Create a new customer"
+          }
+        },
+        {
+          "name": "Get Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Customer details are correct\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data.name).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customerId}}"
+              ]
+            },
+            "description": "Get customer by ID"
+          }
+        },
+        {
+          "name": "Update Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Customer updated successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data.name).to.eql('John Smith');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Smith\",\n    \"customFields\": {\n        \"position\": \"Senior Manager\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customerId}}"
+              ]
+            },
+            "description": "Update customer details"
+          }
+        },
+        {
+          "name": "Delete Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/customers/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "{{customerId}}"
+              ]
+            },
+            "description": "Delete customer"
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Statistics have required properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('statusDistribution');",
+                  "    pm.expect(jsonData.data).to.have.property('groupDistribution');",
+                  "    pm.expect(jsonData.data).to.have.property('timeline');",
+                  "    pm.expect(jsonData.data).to.have.property('total');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/customers/statistics?fromDate={{startDate}}&toDate={{endDate}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "statistics"
+              ],
+              "query": [
+                {
+                  "key": "fromDate",
+                  "value": "{{startDate}}"
+                },
+                {
+                  "key": "toDate",
+                  "value": "{{endDate}}"
+                }
+              ]
+            },
+            "description": "Get customer statistics with optional date range"
+          }
+        },
+        {
+          "name": "Batch Update Customers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Batch update successful\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data.modifiedCount).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"updates\": [\n        {\n            \"id\": \"{{customerId1}}\",\n            \"data\": {\n                \"status\": \"inactive\"\n            }\n        },\n        {\n            \"id\": \"{{customerId2}}\",\n            \"data\": {\n                \"status\": \"inactive\"\n            }\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "batch"
+              ]
+            },
+            "description": "Update multiple customers in a single request"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customer Groups",
+      "item": [
+        {
+          "name": "Create Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Group created successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    ",
+                  "    // Store group ID for subsequent requests",
+                  "    pm.environment.set('groupId', jsonData.data.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"VIP Customers\",\n    \"description\": \"High-value customers group\",\n    \"customFields\": [\n        {\n            \"name\": \"accountManager\",\n            \"type\": \"text\",\n            \"required\": true\n        },\n        {\n            \"name\": \"lastMeeting\",\n            \"type\": \"date\"\n        }\n    ],\n    \"metadata\": {\n        \"category\": \"vip\",\n        \"priority\": \"high\"\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/groups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "groups"
+              ]
+            },
+            "description": "Create a new customer group"
+          }
+        },
+        {
+          "name": "Update Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Group updated successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data.name).to.eql('Premium VIP Customers');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Premium VIP Customers\",\n    \"description\": \"Updated description for high-value customers\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/groups/{{groupId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "groups",
+                "{{groupId}}"
+              ]
+            },
+            "description": "Update customer group details"
+          }
+        },
+        {
+          "name": "Get Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Group details are correct\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data).to.have.property('customFields');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/customers/groups/{{groupId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "groups",
+                "{{groupId}}"
+              ]
+            },
+            "description": "Get customer group by ID"
+          }
+        },
+        {
+          "name": "List Groups",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Groups list has required properties\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.have.property('groups');",
+                  "    pm.expect(jsonData.data).to.have.property('total');",
+                  "    pm.expect(jsonData.data).to.have.property('pages');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/customers/groups?page=1&limit=10&search=vip",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "groups"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "vip"
+                }
+              ]
+            },
+            "description": "List customer groups with pagination and search"
+          }
+        },
+        {
+          "name": "Add Customers to Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Customers added successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data.customersCount).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"customerIds\": [\"{{customerId1}}\", \"{{customerId2}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/groups/{{groupId}}/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "groups",
+                "{{groupId}}",
+                "customers"
+              ]
+            },
+            "description": "Add customers to a group"
+          }
+        },
+        {
+          "name": "Remove Customers from Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Customers removed successfully\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"customerIds\": [\"{{customerId1}}\", \"{{customerId2}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/customers/groups/{{groupId}}/customers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "groups",
+                "{{groupId}}",
+                "customers"
+              ]
+            },
+            "description": "Remove customers from a group"
+          }
+        },
+        {
+          "name": "Delete Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/customers/groups/{{groupId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customers",
+                "groups",
+                "{{groupId}}"
+              ]
+            },
+            "description": "Delete customer group"
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Health check is successful\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('ok');",
+                  "    pm.expect(jsonData).to.have.property('memoryUsage');",
+                  "    pm.expect(jsonData).to.have.property('uptime');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Check API health status"
+          }
+        },
+        {
+          "name": "System Info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"System info is available\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('nodeVersion');",
+                  "    pm.expect(jsonData).to.have.property('platform');",
+                  "    pm.expect(jsonData).to.have.property('totalMemory');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/system-info",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "system-info"
+              ]
+            },
+            "description": "Get system information (admin only)"
+          }
+        }
+      ]
+    }
+  ]
+}

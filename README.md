@@ -6,8 +6,6 @@ A highly scalable, secure, and maintainable Node.js backend built with TypeScrip
 
 ### System Overview
 
-### System Overview
-
 ```mermaid
 graph TB
     subgraph ClientLayer["Client Layer"]

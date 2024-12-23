@@ -6,7 +6,7 @@ import { CustomerStatus, CustomFieldType } from '@/types/customer.js';
 /**
  * Helper function to validate MongoDB ObjectId
  */
-const objectIdValidation = (fieldName: string): z.ZodEffects<z.ZodString, string, string> => {
+const objectIdValidation = (fieldName: string) => {
   return z.string().refine((val) => Types.ObjectId.isValid(val), {
     message: `Invalid ${fieldName} ID format`,
   });

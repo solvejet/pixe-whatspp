@@ -11,6 +11,11 @@ export const connectDB = async (): Promise<typeof mongoose> => {
       socketTimeoutMS: 45000,
       family: 4,
       retryWrites: true,
+      writeConcern: {
+        w: 1,
+        journal: true,
+        wtimeoutMS: 2500,
+      },
       retryReads: true,
       connectTimeoutMS: 10000,
       maxConnecting: 2,

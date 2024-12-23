@@ -1,4 +1,6 @@
 // src/controllers/customer.controller.ts
+
+import { Types } from 'mongoose';
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '@/types/auth.js';
 import type {
@@ -50,10 +52,19 @@ export class CustomerController {
    * @route GET /api/customers/:id
    */
   public getCustomerById = async (
-    req: AuthenticatedRequest & { params: RequestWithId },
+    req: AuthenticatedRequest & { params: { id: string } },
     res: Response,
   ): Promise<void> => {
-    const customer = await customerService.getCustomerById(req.params.id);
+    const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid customer ID format', 400, true, {
+        details: { id },
+      });
+    }
+
+    const customer = await customerService.getCustomerById(id);
     successResponse(res, customer);
   };
 

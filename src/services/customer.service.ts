@@ -1,5 +1,6 @@
 // src/services/customer.service.ts
 import { Types } from 'mongoose';
+import { CustomerStatus } from '@/types/customer.js';
 import type {
   ICustomerDocument,
   CustomerResponse,
@@ -8,7 +9,10 @@ import type {
   CustomerStatistics,
   BatchOperationResult,
   CustomerGroupResponse,
+  AdminDocument,
+  GroupDocument,
   CreateCustomerGroupRequest,
+  PopulatedCustomerDocument,
   UpdateCustomerGroupRequest,
   ICustomerGroupDocument,
 } from '@/types/customer.js';
@@ -19,29 +23,11 @@ import { logger } from '@/utils/logger.js';
 import { Redis } from '@/config/redis.js';
 
 // Define interfaces for populated documents
-interface AdminDocument {
-  _id: Types.ObjectId;
-  email: string;
-  firstName: string;
-  lastName: string;
-}
 
 interface LeanCustomerGroupDocument extends Omit<ICustomerGroupDocument, 'metadata'> {
   _id: Types.ObjectId;
   metadata: Record<string, unknown>;
 }
-
-interface GroupDocument {
-  _id: Types.ObjectId;
-  name: string;
-  description?: string;
-}
-
-type PopulatedCustomerDocument = Omit<ICustomerDocument, 'assignedAdmin' | 'groups'> & {
-  _id: Types.ObjectId;
-  assignedAdmin: AdminDocument;
-  groups: GroupDocument[];
-};
 
 export class CustomerService {
   private static instance: CustomerService;
@@ -104,23 +90,76 @@ export class CustomerService {
         return JSON.parse(cached) as CustomerResponse;
       }
 
-      const customer = (await CustomerModel.findById(id)
-        .populate('assignedAdmin', 'email firstName lastName')
-        .populate('groups', 'name description')
-        .lean()) as unknown as PopulatedCustomerDocument;
+      const customer = await CustomerModel.findById(id)
+        .populate<{ assignedAdmin: AdminDocument }>('assignedAdmin', 'email firstName lastName')
+        .populate<{ groups: GroupDocument[] }>('groups', 'name description')
+        .lean();
 
       if (!customer) {
         throw new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Customer not found', 404);
       }
 
-      const response = this.formatCustomerResponse(customer);
+      // Type assertion for populated document
+      const populatedCustomer = customer as unknown as {
+        _id: Types.ObjectId;
+        name: string;
+        phoneNumber: string;
+        countryCode: string;
+        assignedAdmin: AdminDocument;
+        status: CustomerStatus; // Updated this type
+        customFields: Record<string, unknown>;
+        groups: GroupDocument[];
+        tags: string[];
+        lastActivity: Date | null;
+        metadata: Record<string, unknown>;
+        createdAt: Date;
+        updatedAt: Date;
+      };
+
+      // Validate status
+      if (!Object.values(CustomerStatus).includes(populatedCustomer.status)) {
+        throw new AppError(ErrorCode.DATA_INTEGRITY_ERROR, 'Invalid customer status', 500, false, {
+          details: { status: populatedCustomer.status },
+        });
+      }
+
+      // Ensure customFields and metadata are properly handled
+      const customFields = new Map(Object.entries(populatedCustomer.customFields || {}));
+      const metadata = new Map(Object.entries(populatedCustomer.metadata || {}));
+
+      const response: CustomerResponse = {
+        id: populatedCustomer._id.toString(),
+        name: populatedCustomer.name,
+        phoneNumber: populatedCustomer.phoneNumber,
+        countryCode: populatedCustomer.countryCode,
+        assignedAdmin: {
+          id: populatedCustomer.assignedAdmin._id.toString(),
+          email: populatedCustomer.assignedAdmin.email,
+          firstName: populatedCustomer.assignedAdmin.firstName,
+          lastName: populatedCustomer.assignedAdmin.lastName,
+        },
+        status: populatedCustomer.status, // This is now correctly typed as CustomerStatus
+        customFields: Object.fromEntries(customFields),
+        groups: populatedCustomer.groups.map((group) => ({
+          id: group._id.toString(),
+          name: group.name,
+        })),
+        tags: populatedCustomer.tags,
+        lastActivity: populatedCustomer.lastActivity?.toISOString() ?? null,
+        metadata: Object.fromEntries(metadata),
+        createdAt: populatedCustomer.createdAt.toISOString(),
+        updatedAt: populatedCustomer.updatedAt.toISOString(),
+      };
+
       await Redis.setEx(`${this.CACHE_PREFIX}${id}`, this.CACHE_TTL, JSON.stringify(response));
 
       return response;
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(ErrorCode.DATABASE_ERROR, 'Error retrieving customer', 500, false, {
-        details: { error: error instanceof Error ? error.message : 'Unknown error' },
+        details: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
       });
     }
   }

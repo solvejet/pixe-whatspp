@@ -361,8 +361,10 @@ export class AuthService {
     details: Record<string, unknown>,
   ): Promise<void> {
     try {
+      const userId = typeof user._id === 'string' && user._id !== 'unknown' ? user._id : 'system';
+
       await auditService.log({
-        userId: typeof user._id === 'string' ? user._id : 'unknown',
+        userId,
         action: `user.${action}`,
         category: 'auth',
         details: {

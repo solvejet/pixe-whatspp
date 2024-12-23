@@ -90,6 +90,28 @@ export interface ICustomerGroup extends WithTimestamps {
   metadata: Map<string, unknown>;
 }
 
+export interface AdminDocument {
+  _id: Types.ObjectId;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface GroupDocument {
+  _id: Types.ObjectId;
+  name: string;
+  description?: string;
+}
+
+export interface PopulatedCustomerDocument
+  extends Omit<ICustomerDocument, 'assignedAdmin' | 'groups'> {
+  _id: Types.ObjectId;
+  assignedAdmin: AdminDocument;
+  groups: GroupDocument[];
+  customFields: Map<string, unknown>;
+  metadata: Map<string, unknown>;
+}
+
 /**
  * Customer Group Document Interface for Mongoose
  */
@@ -118,7 +140,7 @@ export interface CustomerResponse {
     firstName: string;
     lastName: string;
   };
-  status: CustomerStatus;
+  status: CustomerStatus; // Using the enum here
   customFields: Record<string, unknown>;
   groups: Array<{
     id: string;

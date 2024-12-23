@@ -1,8 +1,9 @@
 // src/types/audit.ts
+
 import type { Document, Types } from 'mongoose';
 
 export interface IAuditLogData {
-  userId: Types.ObjectId;
+  userId: Types.ObjectId | string;
   action: string;
   category: 'auth' | 'user' | 'system' | 'data' | 'security';
   details: Record<string, unknown>;

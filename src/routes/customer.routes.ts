@@ -1,4 +1,5 @@
 // src/routes/customer.routes.ts
+
 import type {
   Router as ExpressRouter,
   Request,
@@ -36,56 +37,11 @@ function controllerHandler<T extends AuthenticatedRequest>(
 const customerController = new CustomerController();
 
 /**
- * Customer Routes
- * Access Control Strategy:
- * - All routes use permission-based access control
- * - Admin role automatically has all permissions (handled by middleware)
- * - Other roles can have granular permissions through the permission system
- * - Sensitive operations have stricter permission requirements
+ * List and Search Routes
+ * Place these before parameterized routes
  */
 
-// Create customer
-router.post(
-  '/',
-  auth,
-  checkPermission(['customers:create']),
-  rateLimit(50, 15 * 60), // 50 requests per 15 minutes
-  validateRequest(customerSchemas.create),
-  auditMiddleware('customer.create', 'data'),
-  controllerHandler(customerController.createCustomer),
-);
-
-// Get customer by ID
-router.get(
-  '/:id',
-  auth,
-  checkPermission(['customers:read']),
-  auditMiddleware('customer.read', 'data'),
-  controllerHandler(customerController.getCustomerById),
-);
-
-// Update customer
-router.put(
-  '/:id',
-  auth,
-  checkPermission(['customers:update']),
-  rateLimit(100, 15 * 60), // 100 requests per 15 minutes
-  validateRequest(customerSchemas.update),
-  auditMiddleware('customer.update', 'data'),
-  controllerHandler(customerController.updateCustomer),
-);
-
-// Delete customer - Requires elevated permission
-router.delete(
-  '/:id',
-  auth,
-  checkPermission(['customers:delete']),
-  rateLimit(20, 15 * 60), // 20 requests per 15 minutes
-  auditMiddleware('customer.delete', 'data'),
-  controllerHandler(customerController.deleteCustomer),
-);
-
-// Get customer statistics - Requires elevated permission
+// Get customer statistics
 router.get(
   '/statistics',
   auth,
@@ -95,7 +51,21 @@ router.get(
   controllerHandler(customerController.getStatistics),
 );
 
-// Batch update customers - Requires elevated permission
+// List customer groups
+router.get(
+  '/groups',
+  auth,
+  checkPermission(['customer-groups:read']),
+  validateRequest(customerSchemas.query.list),
+  auditMiddleware('customer-group.list', 'data'),
+  controllerHandler(customerController.listCustomerGroups),
+);
+
+/**
+ * Batch Operations
+ */
+
+// Batch update customers
 router.patch(
   '/batch',
   auth,
@@ -107,8 +77,7 @@ router.patch(
 );
 
 /**
- * Customer Group Routes
- * Group operations have their own permission set
+ * Group Management Routes
  */
 
 // Create customer group
@@ -152,16 +121,6 @@ router.get(
   controllerHandler(customerController.getCustomerGroupById),
 );
 
-// List customer groups
-router.get(
-  '/groups',
-  auth,
-  checkPermission(['customer-groups:read']),
-  validateRequest(customerSchemas.query.list),
-  auditMiddleware('customer-group.list', 'data'),
-  controllerHandler(customerController.listCustomerGroups),
-);
-
 // Add customers to group
 router.post(
   '/groups/:id/customers',
@@ -182,6 +141,51 @@ router.delete(
   validateRequest(customerSchemas.group.removeCustomers),
   auditMiddleware('customer-group.remove-customers', 'data'),
   controllerHandler(customerController.removeCustomersFromGroup),
+);
+
+/**
+ * Individual Customer Routes
+ */
+
+// Create customer
+router.post(
+  '/',
+  auth,
+  checkPermission(['customers:create']),
+  rateLimit(50, 15 * 60),
+  validateRequest(customerSchemas.create),
+  auditMiddleware('customer.create', 'data'),
+  controllerHandler(customerController.createCustomer),
+);
+
+// Get customer by ID
+router.get(
+  '/:id',
+  auth,
+  checkPermission(['customers:read']),
+  auditMiddleware('customer.read', 'data'),
+  controllerHandler(customerController.getCustomerById),
+);
+
+// Update customer
+router.put(
+  '/:id',
+  auth,
+  checkPermission(['customers:update']),
+  rateLimit(100, 15 * 60),
+  validateRequest(customerSchemas.update),
+  auditMiddleware('customer.update', 'data'),
+  controllerHandler(customerController.updateCustomer),
+);
+
+// Delete customer
+router.delete(
+  '/:id',
+  auth,
+  checkPermission(['customers:delete']),
+  rateLimit(20, 15 * 60),
+  auditMiddleware('customer.delete', 'data'),
+  controllerHandler(customerController.deleteCustomer),
 );
 
 export default router;
