@@ -188,4 +188,13 @@ router.delete(
   controllerHandler(customerController.deleteCustomer),
 );
 
+router.get(
+  '/',
+  auth,
+  checkPermission(['customers:read']),
+  validateRequest(customerSchemas.query.list),
+  auditMiddleware('customer.list', 'data'),
+  controllerHandler(customerController.listCustomers),
+);
+
 export default router;

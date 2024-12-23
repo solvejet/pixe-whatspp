@@ -12,6 +12,7 @@ import type {
   AdminDocument,
   GroupDocument,
   CreateCustomerGroupRequest,
+  CustomField,
   PopulatedCustomerDocument,
   UpdateCustomerGroupRequest,
   ICustomerGroupDocument,
@@ -27,6 +28,44 @@ import { Redis } from '@/config/redis.js';
 interface LeanCustomerGroupDocument extends Omit<ICustomerGroupDocument, 'metadata'> {
   _id: Types.ObjectId;
   metadata: Record<string, unknown>;
+}
+
+// Base type for schema values
+type SchemaValue = string | number | boolean | Date | Buffer | Types.ObjectId;
+
+// Type for constructor parameters
+type ConstructorParams =
+  | string
+  | number
+  | boolean
+  | Date
+  | Buffer
+  | Types.ObjectId
+  | Record<string, unknown>
+  | undefined;
+
+// Type definition for constructor functions
+type Constructor = {
+  name: string;
+  new (...args: ConstructorParams[]): SchemaValue;
+};
+
+// Updated type for mongoose schema fields
+interface MongooseSchemaField {
+  type?: Constructor | { name: string } | Record<string, unknown>;
+  required?: boolean;
+  instance?: string;
+  [key: string]: unknown;
+}
+
+interface SchemaFieldDefinition {
+  type: string;
+  required: boolean;
+}
+
+// Type guard to check if value is a constructor
+function isConstructor(value: unknown): value is Constructor {
+  return typeof value === 'function' && 'name' in value;
 }
 
 export class CustomerService {
@@ -629,6 +668,136 @@ export class CustomerService {
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Get current customer schema fields and list customers with pagination
+   */
+  public async listCustomers(
+    page = 1,
+    limit = 10,
+  ): Promise<{
+    schema: {
+      baseFields: Record<string, SchemaFieldDefinition>;
+      customFields: CustomField[];
+    };
+    customers: CustomerResponse[];
+    total: number;
+    pages: number;
+  }> {
+    try {
+      const baseSchema = CustomerModel.schema.obj;
+      const baseFields = Object.entries(baseSchema).reduce<Record<string, SchemaFieldDefinition>>(
+        (acc, [key, value]) => {
+          // Skip internal fields and complex types
+          if (
+            key === '_id' ||
+            key === '__v' ||
+            key === 'customFields' ||
+            key === 'metadata' ||
+            key === 'groups' ||
+            key === 'tags'
+          ) {
+            return acc;
+          }
+
+          // Ensure value is a valid schema field
+          const schemaField = value as MongooseSchemaField;
+
+          acc[key] = {
+            type: this.getSchemaType(schemaField),
+            required: this.isFieldRequired(schemaField),
+          };
+          return acc;
+        },
+        {},
+      );
+
+      // Get custom fields
+      const allGroups = await CustomerGroupModel.find().select('customFields').lean();
+      const customFields = Array.from(
+        new Map(
+          allGroups.flatMap((group) => group.customFields).map((field) => [field.name, field]),
+        ).values(),
+      );
+
+      // Get customers with pagination
+      const [customers, total] = await Promise.all([
+        CustomerModel.find()
+          .populate<{ assignedAdmin: AdminDocument }>('assignedAdmin', 'email firstName lastName')
+          .populate<{ groups: GroupDocument[] }>('groups', 'name description')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean<PopulatedCustomerDocument[]>(),
+        CustomerModel.countDocuments(),
+      ]);
+
+      return {
+        schema: {
+          baseFields,
+          customFields,
+        },
+        customers: customers.map((customer) => this.formatCustomerResponse(customer)),
+        total,
+        pages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      throw new AppError(ErrorCode.DATABASE_ERROR, 'Error listing customers', 500, false, {
+        details: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+  }
+
+  /**
+   * Helper method to get schema type
+   */
+  private getSchemaType(schemaField: MongooseSchemaField): string {
+    if (schemaField === null || schemaField === undefined) {
+      return 'unknown';
+    }
+
+    // Handle direct constructor type
+    if (isConstructor(schemaField)) {
+      return schemaField.name.toLowerCase();
+    }
+
+    // Handle schema field object
+    if (typeof schemaField === 'object') {
+      // Handle type property if it exists
+      if ('type' in schemaField && schemaField.type) {
+        const fieldType = schemaField.type;
+
+        // Handle constructor type
+        if (isConstructor(fieldType)) {
+          return fieldType.name.toLowerCase();
+        }
+
+        // Handle object type with name property
+        if (typeof fieldType === 'object' && fieldType !== null && 'name' in fieldType) {
+          return (fieldType as { name: string }).name.toLowerCase();
+        }
+      }
+
+      // Handle instance property
+      if ('instance' in schemaField && typeof schemaField.instance === 'string') {
+        return schemaField.instance.toLowerCase();
+      }
+    }
+
+    return 'unknown';
+  }
+
+  /**
+   * Helper method to check if field is required
+   */
+  private isFieldRequired(schemaField: MongooseSchemaField): boolean {
+    if (typeof schemaField === 'object' && schemaField !== null) {
+      return schemaField.required === true;
+    }
+    return false;
   }
 
   /**

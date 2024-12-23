@@ -35,14 +35,8 @@ export interface CustomFieldValidation {
 /**
  * Custom Field Definition
  */
-export interface CustomField {
-  name: string;
-  type: CustomFieldType;
-  required?: boolean;
-  listOptions?: string[];
-  defaultValue?: unknown;
-  description?: string;
-  validation?: CustomFieldValidation;
+export interface CustomField extends CustomFieldBase {
+  _id: Types.ObjectId;
 }
 
 /**
@@ -151,6 +145,21 @@ export interface CustomerResponse {
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CustomFieldBase {
+  name: string;
+  type: CustomFieldType;
+  required?: boolean;
+  listOptions?: string[];
+  defaultValue?: unknown;
+  description?: string;
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    message?: string;
+  };
 }
 
 export interface CustomerGroupResponse {

@@ -5,6 +5,7 @@ import os from 'node:os';
 
 import authRoutes from './auth.routes.js';
 import customerRoutes from './customer.routes.js';
+import customFieldRoutes from './custom-field.routes.js';
 
 import { auth, checkRole } from '@/middleware/auth.middleware.js';
 import { notFound } from '@/middleware/error-handler.js';
@@ -158,6 +159,8 @@ const API_VERSION = process.env.API_VERSION || '/v1';
 router.use(`${API_VERSION}/auth`, apiLimiter, authRoutes);
 
 router.use(`${API_VERSION}/customers`, apiLimiter, customerRoutes);
+
+router.use(`${API_VERSION}/customers/fields`, apiLimiter, customFieldRoutes);
 
 // Catch-all route for undefined endpoints
 router.all('*', (req: Request, _res: Response, next: NextFunction) => {
