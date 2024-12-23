@@ -1,28 +1,15 @@
-openapi: 3.0.3
+openapi: 3.0.0
 info:
-  title: High-Performance Node.js TypeScript Backend API
-  description: |
-    A production-ready, high-performance backend service with comprehensive authentication,
-    customer management, and dynamic schema capabilities.
+  title: Customer Management API
   version: 1.0.0
+  description: API for managing customers, authentication, and related operations
   contact:
-    name: Karan Shah
-    email: karansxa@gmail.com
-servers:
-  - url: http://localhost:3000/api/v1
-    description: Development server
-  - url: https://app.pixe.in/api/v1
-    description: Production server
+    name: API Support
+    email: support@example.com
 
-tags:
-  - name: Auth
-    description: Authentication and authorization endpoints
-  - name: Customer Schema
-    description: Customer schema management endpoints
-  - name: Customers
-    description: Customer management endpoints
-  - name: System
-    description: System health and information endpoints
+servers:
+  - url: /api/v1
+    description: Default server
 
 components:
   securitySchemes:
@@ -42,102 +29,33 @@ components:
           type: string
         stack:
           type: string
+          description: Only included in development environment
 
-    LoginRequest:
+    PhoneNumber:
       type: object
+      properties:
+        countryCode:
+          type: string
+          pattern: '^\+\d{1,3}$'
+          example: "+1"
+        number:
+          type: string
+          pattern: '^\d{10}$'
+          example: "1234567890"
       required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          format: password
-          minLength: 8
+        - countryCode
+        - number
 
-    RegisterRequest:
+    CustomField:
       type: object
-      required:
-        - email
-        - password
-        - firstName
-        - lastName
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          format: password
-          minLength: 8
-        firstName:
-          type: string
-        lastName:
-          type: string
-        roles:
-          type: array
-          items:
-            type: string
-            enum: [user, staff, admin]
-
-    TokenResponse:
-      type: object
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        user:
-          $ref: "#/components/schemas/User"
-
-    User:
-      type: object
-      properties:
-        _id:
-          type: string
-        email:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-        roles:
-          type: array
-          items:
-            type: string
-        permissions:
-          type: array
-          items:
-            type: string
-        isActive:
-          type: boolean
-        lastLogin:
-          type: string
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    CustomerField:
-      type: object
-      required:
-        - name
-        - type
       properties:
         name:
           type: string
-          pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
         type:
           type: string
           enum: [string, number, select, date, boolean]
         required:
           type: boolean
-          default: false
         options:
           type: array
           items:
@@ -146,57 +64,64 @@ components:
           type: string
         isDefault:
           type: boolean
-          default: false
-
-    CustomerSchema:
-      type: object
-      properties:
-        fields:
-          type: array
-          items:
-            $ref: "#/components/schemas/CustomerField"
-        version:
-          type: integer
-        isActive:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    PhoneNumber:
-      type: object
-      required:
-        - countryCode
-        - number
-      properties:
-        countryCode:
-          type: string
-          pattern: ^\+\d{1,3}$
-        number:
-          type: string
-          pattern: ^\+?[1-9]\d{1,14}$
+        validation:
+          type: object
+          properties:
+            min:
+              type: number
+            max:
+              type: number
+            pattern:
+              type: string
+            message:
+              type: string
 
     Customer:
       type: object
-      required:
-        - name
-        - phoneNumber
-        - assignedAdmin
       properties:
         _id:
           type: string
+          format: objectid
         name:
           type: string
         phoneNumber:
           $ref: "#/components/schemas/PhoneNumber"
         assignedAdmin:
-          type: string
+          type: object
+          properties:
+            _id:
+              type: string
+              format: objectid
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
         customFields:
           type: object
           additionalProperties: true
+        isActive:
+          type: boolean
+        status:
+          type: string
+          enum: [active, inactive, pending, archived, blocked]
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        metadata:
+          type: object
+          properties:
+            lastUpdatedBy:
+              type: string
+              format: objectid
+            source:
+              type: string
+            importId:
+              type: string
         createdAt:
           type: string
           format: date-time
@@ -204,45 +129,112 @@ components:
           type: string
           format: date-time
 
-paths:
-  /auth/register:
-    post:
-      tags:
-        - Auth
-      summary: Register a new user
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RegisterRequest"
-      responses:
-        "201":
-          description: User registered successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TokenResponse"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "409":
-          description: Email already exists
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+    CustomerSchema:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomField"
+        version:
+          type: number
+        isActive:
+          type: boolean
+        metadata:
+          type: object
+          properties:
+            lastUpdatedBy:
+              type: string
+              format: objectid
+            changes:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date-time
+                  updatedBy:
+                    type: string
+                    format: objectid
+                  change:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [add, remove, modify]
+                      field:
+                        type: string
+                      details:
+                        type: object
+                        additionalProperties: true
 
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          type: object
+          properties:
+            _id:
+              type: string
+              format: objectid
+            email:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            roles:
+              type: array
+              items:
+                type: string
+            permissions:
+              type: array
+              items:
+                type: string
+
+    Statistics:
+      type: object
+      properties:
+        total:
+          type: number
+        active:
+          type: number
+        inactive:
+          type: number
+        new30Days:
+          type: number
+        statusDistribution:
+          type: object
+          additionalProperties:
+            type: number
+
+paths:
   /auth/login:
     post:
       tags:
-        - Auth
-      summary: Authenticate user and get tokens
+        - Authentication
+      summary: Login user
       requestBody:
         required: true
         content:
@@ -255,84 +247,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TokenResponse"
+                $ref: "#/components/schemas/LoginResponse"
         "401":
           description: Invalid credentials
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        "423":
-          description: Account locked
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /auth/refresh-token:
-    post:
-      tags:
-        - Auth
-      summary: Refresh access token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - refreshToken
-              properties:
-                refreshToken:
-                  type: string
-      responses:
-        "200":
-          description: Token refreshed successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TokenResponse"
-        "401":
-          description: Invalid refresh token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /auth/logout:
-    post:
-      tags:
-        - Auth
-      summary: Logout user and invalidate tokens
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - refreshToken
-              properties:
-                refreshToken:
-                  type: string
-      responses:
-        "200":
-          description: Logged out successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
 
   /customers/schema:
     get:
       tags:
         - Customer Schema
-      summary: Get current customer schema
+      summary: Get active customer schema
       security:
         - BearerAuth: []
       responses:
@@ -355,13 +282,11 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - fields
               properties:
                 fields:
                   type: array
                   items:
-                    $ref: "#/components/schemas/CustomerField"
+                    $ref: "#/components/schemas/CustomField"
       responses:
         "200":
           description: Schema updated successfully
@@ -369,81 +294,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerSchema"
-        "400":
-          description: Invalid schema definition
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   /customers:
-    post:
-      tags:
-        - Customers
-      summary: Create a new customer
-      security:
-        - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - name
-                - phoneNumber
-                - assignedAdmin
-              properties:
-                name:
-                  type: string
-                phoneNumber:
-                  $ref: "#/components/schemas/PhoneNumber"
-                assignedAdmin:
-                  type: string
-                customFields:
-                  type: object
-                  additionalProperties: true
-      responses:
-        "201":
-          description: Customer created successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Customer"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
     get:
       tags:
         - Customers
-      summary: Get all customers with pagination and filters
+      summary: Get customers list
       security:
         - BearerAuth: []
       parameters:
-        - in: query
-          name: page
+        - name: page
+          in: query
           schema:
             type: integer
             minimum: 1
             default: 1
-        - in: query
-          name: limit
+        - name: limit
+          in: query
           schema:
             type: integer
             minimum: 1
             maximum: 100
             default: 10
-        - in: query
-          name: filters
+        - name: sortBy
+          in: query
           schema:
-            type: object
-            additionalProperties: true
-          style: deepObject
-          explode: true
+            type: string
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: assignedAdmin
+          in: query
+          schema:
+            type: string
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, pending, archived, blocked]
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, xlsx]
       responses:
         "200":
           description: Customers retrieved successfully
@@ -452,12 +369,92 @@ paths:
               schema:
                 type: object
                 properties:
-                  customers:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Customer"
-                  total:
-                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      customers:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Customer"
+                      total:
+                        type: number
+                      page:
+                        type: number
+                      limit:
+                        type: number
+                      totalPages:
+                        type: number
+                  message:
+                    type: string
+
+    post:
+      tags:
+        - Customers
+      summary: Create new customer
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phoneNumber:
+                  $ref: "#/components/schemas/PhoneNumber"
+                assignedAdmin:
+                  type: string
+                  format: objectid
+                customFields:
+                  type: object
+                  additionalProperties: true
+                status:
+                  type: string
+                  enum: [active, inactive, pending, archived, blocked]
+                tags:
+                  type: array
+                  items:
+                    type: string
+                notes:
+                  type: string
+              required:
+                - name
+                - phoneNumber
+                - assignedAdmin
+      responses:
+        "201":
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+                  message:
+                    type: string
+
+  /customers/statistics:
+    get:
+      tags:
+        - Customers
+      summary: Get customer statistics
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Statistics"
+                  message:
+                    type: string
 
   /customers/{id}:
     parameters:
@@ -466,6 +463,7 @@ paths:
         required: true
         schema:
           type: string
+          format: objectid
 
     get:
       tags:
@@ -479,13 +477,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Customer"
-        "404":
-          description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+                  message:
+                    type: string
 
     put:
       tags:
@@ -500,28 +497,39 @@ paths:
             schema:
               type: object
               properties:
+                name:
+                  type: string
+                phoneNumber:
+                  $ref: "#/components/schemas/PhoneNumber"
+                assignedAdmin:
+                  type: string
+                  format: objectid
                 customFields:
                   type: object
                   additionalProperties: true
+                isActive:
+                  type: boolean
+                status:
+                  type: string
+                  enum: [active, inactive, pending, archived, blocked]
+                tags:
+                  type: array
+                  items:
+                    type: string
+                notes:
+                  type: string
       responses:
         "200":
           description: Customer updated successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Customer"
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "404":
-          description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Customer"
+                  message:
+                    type: string
 
     delete:
       tags:
@@ -539,74 +547,56 @@ paths:
                 properties:
                   message:
                     type: string
-        "404":
-          description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
-  /health:
-    get:
+  /customers/bulk-update:
+    post:
       tags:
-        - System
-      summary: Get system health status
-      responses:
-        "200":
-          description: System health information
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    enum: [ok, error]
-                  timestamp:
-                    type: string
-                    format: date-time
-                  version:
-                    type: string
-                  environment:
-                    type: string
-                  memoryUsage:
-                    type: object
-                    properties:
-                      heapUsed:
-                        type: number
-                      heapTotal:
-                        type: number
-                      external:
-                        type: number
-                      rss:
-                        type: number
-                  uptime:
-                    type: number
-
-  /system-info:
-    get:
-      tags:
-        - System
-      summary: Get detailed system information
+        - Customers
+      summary: Bulk update customers
       security:
         - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: objectid
+                updates:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [active, inactive, pending, archived, blocked]
+                    isActive:
+                      type: boolean
+                    assignedAdmin:
+                      type: string
+                      format: objectid
+                    tags:
+                      type: array
+                      items:
+                        type: string
+                    customFields:
+                      type: object
+                      additionalProperties: true
+              required:
+                - ids
+                - updates
       responses:
         "200":
-          description: System information
+          description: Customers updated successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  nodeVersion:
+                  message:
                     type: string
-                  platform:
-                    type: string
-                  arch:
-                    type: string
-                  cpus:
-                    type: integer
-                  totalMemory:
-                    type: number
-                  freeMemory:
+                  updated:
                     type: number

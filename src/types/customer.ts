@@ -1,129 +1,242 @@
-// src/types/customer.ts
 import type { Document, Types } from 'mongoose';
+import type { WithTimestamps } from './mongoose.js';
 
-// Field Types
-export type FieldType = 'string' | 'number' | 'select' | 'date' | 'boolean';
-export type CustomerStatus = 'active' | 'inactive' | 'pending' | 'archived' | 'blocked';
+/**
+ * Customer Status Enum
+ */
+export enum CustomerStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  PENDING = 'pending',
+  BLOCKED = 'blocked',
+}
 
-export type LeanDocument<T> = {
-  [P in keyof T]: T[P] extends Document ? LeanDocument<T[P]> : T[P];
-} & { _id: Types.ObjectId };
+/**
+ * Custom Field Types Enum
+ */
+export enum CustomFieldType {
+  TEXT = 'text',
+  NUMBER = 'number',
+  DATE = 'date',
+  BOOLEAN = 'boolean',
+  LIST = 'list',
+}
 
-// Custom Field Definition
-export interface ICustomField {
+/**
+ * Custom Field Validation Interface
+ */
+export interface CustomFieldValidation {
+  min?: number;
+  max?: number;
+  pattern?: string;
+  message?: string;
+}
+
+/**
+ * Custom Field Definition
+ */
+export interface CustomField {
   name: string;
-  type: FieldType;
-  required: boolean;
-  options?: string[];
+  type: CustomFieldType;
+  required?: boolean;
+  listOptions?: string[];
+  defaultValue?: unknown;
   description?: string;
-  isDefault?: boolean;
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-    message?: string;
-  };
-  createdAt: Date;
-  updatedAt: Date;
+  validation?: CustomFieldValidation;
 }
 
-// Phone Number Interface
-export interface IPhoneNumber {
+/**
+ * Dynamic Fields Map Type
+ */
+export type DynamicFields = Map<string, unknown>;
+
+/**
+ * Base Customer Interface
+ */
+export interface ICustomer extends WithTimestamps {
+  name: string;
+  phoneNumber: string;
   countryCode: string;
-  number: string;
+  assignedAdmin: Types.ObjectId;
+  status: CustomerStatus;
+  customFields: DynamicFields;
+  groups: Array<Types.ObjectId | PopulatedGroup>;
+  tags: string[];
+  lastActivity: Date | null;
+  metadata: Map<string, unknown>;
 }
 
-// User Reference Interface
-export interface IUserRef {
-  _id: Types.ObjectId;
-  firstName: string;
-  lastName: string;
-  email: string;
+/**
+ * Customer Document Interface for Mongoose
+ */
+export interface ICustomerDocument extends ICustomer, Document {
+  updateLastActivity(): Promise<ICustomerDocument>;
+  addTags(tags: string[]): Promise<ICustomerDocument>;
+  removeTags(tags: string[]): Promise<ICustomerDocument>;
+  manageGroups(
+    groupIds: Types.ObjectId[],
+    operation: 'add' | 'remove' | 'set',
+  ): Promise<ICustomerDocument>;
 }
 
-// Schema Change History
-export interface ISchemaChange {
-  date: Date;
-  updatedBy: Types.ObjectId;
-  change: {
-    type: 'add' | 'remove' | 'modify';
-    field: string;
-    details: Record<string, unknown>;
-  };
+/**
+ * Base Customer Group Interface
+ */
+export interface ICustomerGroup extends WithTimestamps {
+  name: string;
+  description?: string;
+  customFields: CustomField[];
+  customers: Types.ObjectId[];
+  metadata: Map<string, unknown>;
 }
 
-// Base Customer Interface
-export interface ICustomerBase {
+/**
+ * Customer Group Document Interface for Mongoose
+ */
+export interface ICustomerGroupDocument extends ICustomerGroup, Document {}
+
+/**
+ * Populated Group Type for Type Safety
+ */
+export interface PopulatedGroup {
   _id: Types.ObjectId;
   name: string;
-  phoneNumber: {
-    countryCode: string;
-    number: string;
+  description?: string;
+}
+
+/**
+ * Customer Response DTOs
+ */
+export interface CustomerResponse {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  countryCode: string;
+  assignedAdmin: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
   };
-  assignedAdmin: Types.ObjectId;
-  customFields: Record<string, unknown>;
-  isActive: boolean;
   status: CustomerStatus;
-  tags?: string[];
-  notes?: string;
-  metadata: {
-    lastUpdatedBy: Types.ObjectId;
-    source: string;
-    importId?: string;
-  };
-  createdAt: Date;
-  updatedAt: Date;
+  customFields: Record<string, unknown>;
+  groups: Array<{
+    id: string;
+    name: string;
+  }>;
+  tags: string[];
+  lastActivity: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Customer Document Interface with populated fields
-export interface ICustomerPopulated extends Omit<ICustomerBase, 'assignedAdmin'> {
-  _id: Types.ObjectId;
-  assignedAdmin: IUserRef;
+export interface CustomerGroupResponse {
+  id: string;
+  name: string;
+  description?: string;
+  customFields: CustomField[];
+  customersCount: number;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Customer Document Interface
-export interface ICustomer extends Omit<ICustomerBase, '_id'>, Document {
-  assignedAdmin: Types.ObjectId;
-}
-// Customer Schema Fields Interface
-export interface ICustomerSchema {
-  _id: Types.ObjectId;
-  fields: ICustomField[];
-  version: number;
-  isActive: boolean;
-  metadata: {
-    lastUpdatedBy: Types.ObjectId;
-    changes: ISchemaChange[];
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-
-// Query and Filter Interfaces
-export interface CustomerFilters {
-  name?: { $regex: string; $options: string };
-  assignedAdmin?: Types.ObjectId;
+/**
+ * Request DTOs
+ */
+export interface CreateCustomerRequest {
+  name: string;
+  phoneNumber: string;
+  countryCode: string;
+  assignedAdmin: string;
   status?: CustomerStatus;
-  tags?: { $in: string[] };
-  isActive?: boolean;
-  createdAt?: {
-    $gte?: Date;
-    $lte?: Date;
-  };
   customFields?: Record<string, unknown>;
+  groups?: string[];
+  tags?: string[];
+  metadata?: Record<string, unknown>;
 }
 
-export interface CustomerSortOptions {
-  field: string;
-  order: 'asc' | 'desc';
+export interface UpdateCustomerRequest {
+  name?: string;
+  phoneNumber?: string;
+  countryCode?: string;
+  assignedAdmin?: string;
+  status?: CustomerStatus;
+  customFields?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
-// Service Response Types
-export interface CustomerListResponse {
-  customers: ICustomerPopulated[];
+export interface CreateCustomerGroupRequest {
+  name: string;
+  description?: string;
+  customFields?: CustomField[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface UpdateCustomerGroupRequest {
+  name?: string;
+  description?: string;
+  customFields?: CustomField[];
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Search/Filter Types
+ */
+export interface CustomerSearchCriteria {
+  query?: string;
+  status?: CustomerStatus;
+  groupId?: string;
+  assignedAdmin?: string;
+  tags?: string[];
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * Batch Operation Types
+ */
+export interface BatchUpdateOperation {
+  id: string;
+  data: Partial<UpdateCustomerRequest>;
+}
+
+export interface BatchOperationResult {
+  ok: number;
+  modifiedCount: number;
+  matchedCount: number;
+  upsertedCount: number;
+  upsertedIds: { [key: number]: Types.ObjectId };
+  insertedCount: number;
+  insertedIds: { [key: number]: Types.ObjectId };
+  hasWriteErrors: boolean;
+}
+
+/**
+ * Statistics & Reporting Types
+ */
+export interface CustomerStatistics {
+  statusDistribution: Array<{ _id: string; count: number }>;
+  groupDistribution: Array<{
+    _id: Types.ObjectId;
+    name: string;
+    count: number;
+  }>;
+  timeline: Array<{
+    _id: {
+      year: number;
+      month: number;
+      day: number;
+    };
+    count: number;
+  }>;
   total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+}
+
+export interface CustomerReport {
+  _id: string | Types.ObjectId | null;
+  total: number;
 }

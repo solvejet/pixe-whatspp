@@ -10,6 +10,13 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
   API_VERSION: z.string().default('v1'),
+  ALLOWED_ORIGINS: z.string().default('*'),
+
+  // JWT TOkens
+  JWT_SECRET: z.string().min(32),
+  JWT_REFRESH_SECRET: z.string().min(32),
+  JWT_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
   // Database
   MONGODB_URI: z.string().default('mongodb://localhost:27017/your-database'),
@@ -22,12 +29,6 @@ const envSchema = z.object({
   // RabbitMQ
   RABBITMQ_URL: z.string().default('amqp://localhost'),
   RABBITMQ_QUEUE_PREFIX: z.string().default('app'),
-
-  // JWT
-  JWT_SECRET: z.string().default('your-secret-key'),
-  JWT_REFRESH_SECRET: z.string().default('your-refresh-secret'),
-  JWT_EXPIRES_IN: z.string().default('15m'),
-  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
   // Rate Limiting
   RATE_LIMIT_WINDOW: z.coerce.number().default(900000), // 15 minutes in ms

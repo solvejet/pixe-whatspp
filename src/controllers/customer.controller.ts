@@ -1,351 +1,255 @@
 // src/controllers/customer.controller.ts
 import type { Response } from 'express';
-import { Types } from 'mongoose';
-import { ApiError } from '@/middleware/error-handler.js';
-import type { TypedAuthRequest } from '@/types/auth.js';
-import { customerService } from '@/services/customer.service.js';
-import type { ICustomerSchema, ICustomerPopulated } from '@/types/customer.js';
+import type { AuthenticatedRequest } from '@/types/auth.js';
 import type {
-  SchemaUpdateBody,
-  CustomerCreateBody,
-  CustomerUpdateBody,
-  CustomerQueryParams,
-  CustomerFilters,
-  CustomerBulkUpdateBody,
-} from '@/types/customer-requests.js';
-import { logger } from '@/utils/logger.js';
+  CreateCustomerRequest,
+  UpdateCustomerRequest,
+  CreateCustomerGroupRequest,
+  UpdateCustomerGroupRequest,
+} from '@/types/customer.js';
+import { customerService } from '@/services/customer.service.js';
+import { successResponse } from '@/middleware/error-handler.js';
+import { AppError, ErrorCode } from '@/utils/error-service.js';
 
+// Define request parameter interfaces
+interface RequestWithId {
+  id: string;
+}
+
+interface BatchUpdateRequest {
+  updates: Array<{ id: string; data: UpdateCustomerRequest }>;
+}
+
+interface GroupCustomersRequest {
+  customerIds: string[];
+}
+
+/**
+ * Controller handling customer-related operations with proper error handling and type safety
+ */
 export class CustomerController {
   /**
-   * Get active customer schema
+   * Create a new customer
+   * @route POST /api/customers
    */
-  async getSchema(
-    _req: TypedAuthRequest,
-    res: Response<{ data: ICustomerSchema; message: string }>,
-  ): Promise<void> {
-    const schema = await customerService.getActiveSchema();
-    res.json({
-      data: schema,
-      message: 'Customer schema retrieved successfully',
-    });
-  }
+  public createCustomer = async (
+    req: AuthenticatedRequest & { body: CreateCustomerRequest },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
+    }
+
+    const customer = await customerService.createCustomer(req.body, userId);
+    successResponse(res, customer, 'Customer created successfully', 201);
+  };
 
   /**
-   * Update customer schema
+   * Get customer by ID
+   * @route GET /api/customers/:id
    */
-  async updateSchema(
-    req: TypedAuthRequest<SchemaUpdateBody>,
-    res: Response<{ data: ICustomerSchema; message: string }>,
-  ): Promise<void> {
-    if (!req.user) {
-      throw new ApiError(401, 'Authentication required');
-    }
-
-    const fieldsWithTimestamps = req.body.fields.map((field) => ({
-      ...field,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
-
-    const updatedSchema = await customerService.updateSchema(fieldsWithTimestamps, req.user);
-    res.json({
-      data: updatedSchema,
-      message: 'Customer schema updated successfully',
-    });
-  }
-
-  /**
-   * Create new customer
-   */
-  async createCustomer(
-    req: TypedAuthRequest<CustomerCreateBody>,
-    res: Response<{ data: ICustomerPopulated; message: string }>,
-  ): Promise<void> {
-    if (!req.user) {
-      throw new ApiError(401, 'Authentication required');
-    }
-
-    const { assignedAdmin, ...customerData } = req.body;
-
-    const customer = await customerService.createCustomer({
-      ...customerData,
-      assignedAdmin: new Types.ObjectId(assignedAdmin),
-      metadata: {
-        lastUpdatedBy: new Types.ObjectId(req.user.userId),
-        source: 'api',
-      },
-    });
-
-    res.status(201).json({
-      data: customer,
-      message: 'Customer created successfully',
-    });
-  }
-
-  /**
-   * Get customers with pagination and filters
-   */
-  async getCustomers(
-    req: TypedAuthRequest<never, never, CustomerQueryParams>,
-    res: Response<{
-      data: {
-        customers: ICustomerPopulated[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-      };
-      message: string;
-    }>,
-  ): Promise<void> {
-    const {
-      page = '1',
-      limit = '10',
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-      search,
-      assignedAdmin,
-      fromDate,
-      toDate,
-      status,
-      tags,
-      format,
-    } = req.query;
-
-    // Handle export request
-    if (format) {
-      return this.exportCustomers(req, res);
-    }
-
-    // Add type checking for format
-    if (format && format !== 'csv' && format !== 'xlsx') {
-      throw new ApiError(400, 'Invalid export format. Supported formats: csv, xlsx');
-    }
-
-    const filters: CustomerFilters = {};
-
-    if (search) {
-      filters.name = { $regex: search, $options: 'i' };
-    }
-
-    if (assignedAdmin) {
-      filters.assignedAdmin = new Types.ObjectId(assignedAdmin);
-    }
-
-    if (fromDate || toDate) {
-      filters.createdAt = {};
-      if (fromDate) {
-        filters.createdAt.$gte = new Date(fromDate);
-      }
-      if (toDate) {
-        filters.createdAt.$lte = new Date(toDate);
-      }
-    }
-
-    if (status) {
-      filters.status = status;
-    }
-
-    if (tags && Array.isArray(tags)) {
-      filters.tags = { $in: tags };
-    }
-
-    const pageNumber = Math.max(parseInt(page), 1);
-    const limitNumber = Math.min(Math.max(parseInt(limit), 1), 100); // Add upper limit for security
-
-    const { customers, total } = await customerService.getCustomers(
-      pageNumber,
-      limitNumber,
-      filters,
-      {
-        sortBy,
-        sortOrder: sortOrder as 'asc' | 'desc',
-      },
-    );
-
-    res.json({
-      data: {
-        customers,
-        total,
-        page: pageNumber,
-        limit: limitNumber,
-        totalPages: Math.ceil(total / limitNumber),
-      },
-      message: 'Customers retrieved successfully',
-    });
-  }
-
-  /**
-   * Get single customer by ID
-   */
-  async getCustomer(
-    req: TypedAuthRequest<never, { id: string }>,
-    res: Response<{ data: ICustomerPopulated; message: string }>,
-  ): Promise<void> {
-    if (!req.user) {
-      throw new ApiError(401, 'Authentication required');
-    }
-
+  public getCustomerById = async (
+    req: AuthenticatedRequest & { params: RequestWithId },
+    res: Response,
+  ): Promise<void> => {
     const customer = await customerService.getCustomerById(req.params.id);
-
-    res.json({
-      data: customer,
-      message: 'Customer retrieved successfully',
-    });
-  }
+    successResponse(res, customer);
+  };
 
   /**
    * Update customer
+   * @route PUT /api/customers/:id
    */
-  async updateCustomer(
-    req: TypedAuthRequest<CustomerUpdateBody, { id: string }>,
-    res: Response<{ data: ICustomerPopulated; message: string }>,
-  ): Promise<void> {
-    if (!req.user) {
-      throw new ApiError(401, 'Authentication required');
+  public updateCustomer = async (
+    req: AuthenticatedRequest & { params: RequestWithId; body: UpdateCustomerRequest },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
     }
 
-    const { assignedAdmin, ...restBody } = req.body;
-    const updateData = {
-      ...restBody,
-      ...(assignedAdmin && { assignedAdmin: new Types.ObjectId(assignedAdmin) }),
-    };
-
-    const customer = await customerService.updateCustomer(req.params.id, updateData, req.user);
-
-    res.json({
-      data: customer,
-      message: 'Customer updated successfully',
-    });
-  }
+    const customer = await customerService.updateCustomer(req.params.id, req.body, userId);
+    successResponse(res, customer, 'Customer updated successfully');
+  };
 
   /**
    * Delete customer
+   * @route DELETE /api/customers/:id
    */
-  async deleteCustomer(
-    req: TypedAuthRequest<never, { id: string }>,
-    res: Response<{ message: string }>,
-  ): Promise<void> {
-    if (!req.user) {
-      throw new ApiError(401, 'Authentication required');
-    }
-
-    await customerService.deleteCustomer(req.params.id, req.user);
-    res.json({ message: 'Customer deleted successfully' });
-  }
-
-  /**
-   * Bulk update customers
-   */
-  async bulkUpdateCustomers(
-    req: TypedAuthRequest<CustomerBulkUpdateBody>,
-    res: Response<{ message: string; updated: number }>,
-  ): Promise<void> {
-    if (!req.user) {
-      throw new ApiError(401, 'Authentication required');
-    }
-
-    const { ids, updates } = req.body;
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      throw new ApiError(400, 'No customer IDs provided');
-    }
-
-    const { assignedAdmin, ...restUpdates } = updates;
-    const updateData = {
-      ...restUpdates,
-      ...(assignedAdmin && { assignedAdmin: new Types.ObjectId(assignedAdmin) }),
-    };
-
-    const updatedCount = await customerService.bulkUpdateCustomers(ids, updateData, req.user);
-
-    res.json({
-      message: 'Customers updated successfully',
-      updated: updatedCount,
-    });
-  }
-
-  /**
-   * Export customers
-   */
-  private async exportCustomers(
-    req: TypedAuthRequest<never, never, CustomerQueryParams>,
+  public deleteCustomer = async (
+    req: AuthenticatedRequest & { params: RequestWithId },
     res: Response,
-  ): Promise<void> {
-    const { format = 'csv', search, assignedAdmin, fromDate, toDate, status, tags } = req.query;
-
-    if (format !== 'csv' && format !== 'xlsx') {
-      throw new ApiError(400, 'Invalid export format. Supported formats: csv, xlsx');
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
     }
 
-    const filters: CustomerFilters = {};
-
-    if (search) {
-      filters.name = { $regex: search, $options: 'i' };
-    }
-
-    if (assignedAdmin) {
-      filters.assignedAdmin = new Types.ObjectId(assignedAdmin);
-    }
-
-    if (status) {
-      filters.status = status;
-    }
-
-    if (tags && Array.isArray(tags)) {
-      filters.tags = { $in: tags };
-    }
-
-    if (fromDate || toDate) {
-      filters.createdAt = {};
-      if (fromDate) {
-        filters.createdAt.$gte = new Date(fromDate);
-      }
-      if (toDate) {
-        filters.createdAt.$lte = new Date(toDate);
-      }
-    }
-
-    try {
-      const data = await customerService.exportCustomers(filters, format);
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `customers-export-${timestamp}.${format}`;
-      const contentType =
-        format === 'csv'
-          ? 'text/csv'
-          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-      res.setHeader('Cache-Control', 'no-cache');
-      res.send(data);
-    } catch (error) {
-      logger.error('Export failed:', error);
-      throw new ApiError(500, 'Export failed. Please try again.');
-    }
-  }
+    await customerService.deleteCustomer(req.params.id, userId);
+    successResponse(res, null, 'Customer deleted successfully', 204);
+  };
 
   /**
    * Get customer statistics
+   * @route GET /api/customers/statistics
    */
-  async getStatistics(
-    req: TypedAuthRequest,
-    res: Response<{
-      data: {
-        total: number;
-        active: number;
-        inactive: number;
-        new30Days: number;
-        statusDistribution: Record<string, number>;
-      };
-      message: string;
-    }>,
-  ): Promise<void> {
-    const stats = await customerService.getStatistics();
-    res.json({
-      data: stats,
-      message: 'Customer statistics retrieved successfully',
-    });
-  }
+  public getStatistics = async (
+    req: AuthenticatedRequest & {
+      query: { fromDate?: string; toDate?: string };
+    },
+    res: Response,
+  ): Promise<void> => {
+    const fromDate = req.query.fromDate ? new Date(req.query.fromDate) : undefined;
+    const toDate = req.query.toDate ? new Date(req.query.toDate) : undefined;
+
+    const dateRange = fromDate && toDate ? { start: fromDate, end: toDate } : undefined;
+    const statistics = await customerService.getStatistics(dateRange);
+
+    successResponse(res, statistics);
+  };
+
+  /**
+   * Batch update customers
+   * @route PATCH /api/customers/batch
+   */
+  public batchUpdateCustomers = async (
+    req: AuthenticatedRequest & { body: BatchUpdateRequest },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
+    }
+
+    const result = await customerService.batchUpdateCustomers(req.body.updates, userId);
+    successResponse(res, result, 'Customers updated successfully');
+  };
+
+  /**
+   * Create customer group
+   * @route POST /api/customers/groups
+   */
+  public createCustomerGroup = async (
+    req: AuthenticatedRequest & { body: CreateCustomerGroupRequest },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
+    }
+
+    const group = await customerService.createCustomerGroup(req.body, userId);
+    successResponse(res, group, 'Customer group created successfully', 201);
+  };
+
+  /**
+   * Update customer group
+   * @route PUT /api/customers/groups/:id
+   */
+  public updateCustomerGroup = async (
+    req: AuthenticatedRequest & {
+      params: RequestWithId;
+      body: UpdateCustomerGroupRequest;
+    },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
+    }
+
+    const group = await customerService.updateCustomerGroup(req.params.id, req.body, userId);
+    successResponse(res, group, 'Customer group updated successfully');
+  };
+
+  /**
+   * Delete customer group
+   * @route DELETE /api/customers/groups/:id
+   */
+  public deleteCustomerGroup = async (
+    req: AuthenticatedRequest & { params: RequestWithId },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
+    }
+
+    await customerService.deleteCustomerGroup(req.params.id, userId);
+    successResponse(res, null, 'Customer group deleted successfully', 204);
+  };
+
+  /**
+   * Get customer group by ID
+   * @route GET /api/customers/groups/:id
+   */
+  public getCustomerGroupById = async (
+    req: AuthenticatedRequest & { params: RequestWithId },
+    res: Response,
+  ): Promise<void> => {
+    const group = await customerService.getCustomerGroupById(req.params.id);
+    successResponse(res, group);
+  };
+
+  /**
+   * List customer groups
+   * @route GET /api/customers/groups
+   */
+  public listCustomerGroups = async (
+    req: AuthenticatedRequest & {
+      query: { page?: string; limit?: string; search?: string };
+    },
+    res: Response,
+  ): Promise<void> => {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const search = req.query.search;
+
+    const groups = await customerService.listCustomerGroups(page, limit, search);
+    successResponse(res, groups);
+  };
+
+  /**
+   * Add customers to group
+   * @route POST /api/customers/groups/:id/customers
+   */
+  public addCustomersToGroup = async (
+    req: AuthenticatedRequest & { params: RequestWithId; body: GroupCustomersRequest },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
+    }
+
+    const group = await customerService.addCustomersToGroup(
+      req.params.id,
+      req.body.customerIds,
+      userId,
+    );
+    successResponse(res, group, 'Customers added to group successfully');
+  };
+
+  /**
+   * Remove customers from group
+   * @route DELETE /api/customers/groups/:id/customers
+   */
+  public removeCustomersFromGroup = async (
+    req: AuthenticatedRequest & { params: RequestWithId; body: GroupCustomersRequest },
+    res: Response,
+  ): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User ID not found in request', 401);
+    }
+
+    const group = await customerService.removeCustomersFromGroup(
+      req.params.id,
+      req.body.customerIds,
+      userId,
+    );
+    successResponse(res, group, 'Customers removed from group successfully');
+  };
 }

@@ -1,6 +1,7 @@
 // src/types/redis.ts
 export interface RedisSetOptions {
-  EX?: number; // Expiry in seconds
+  EX?: number;
+  NX?: boolean;
 }
 
 export interface SessionData {

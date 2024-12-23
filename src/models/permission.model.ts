@@ -1,8 +1,8 @@
 // src/models/permission.model.ts
 import { Schema, model } from 'mongoose';
-import type { IPermission } from '@/types/auth.js';
+import type { IPermissionDocument } from '@/types/auth.js';
 
-const permissionSchema = new Schema<IPermission>(
+const permissionSchema = new Schema<IPermissionDocument>(
   {
     name: {
       type: String,
@@ -28,4 +28,4 @@ const permissionSchema = new Schema<IPermission>(
   },
 );
 
-export const PermissionModel = model<IPermission>('Permission', permissionSchema);
+export const PermissionModel = model<IPermissionDocument>('Permission', permissionSchema);

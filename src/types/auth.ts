@@ -1,191 +1,365 @@
 // src/types/auth.ts
-import type { Document, Types } from 'mongoose';
 import type { Request } from 'express';
+import type { Document, Types } from 'mongoose';
+import type { WithTimestamps } from './mongoose.js';
 import type { ParsedQs } from 'qs';
 
-// Base Permission Types
-export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'manage';
-export type PermissionResource =
-  | 'users'
-  | 'roles'
-  | 'permissions'
-  | 'customers'
-  | 'audit_logs'
-  | 'system'
-  | 'settings';
+// Define base parameter dictionary type
+export type RequestParams = Record<string, string>;
 
-// Permission interfaces
-export interface IPermission extends Document {
-  name: string;
-  description: string;
-  resource: PermissionResource;
-  action: PermissionAction;
-  createdAt: Date;
-  updatedAt: Date;
+/**
+ * Enums
+ */
+export enum CustomerStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  VERIFIED = 'verified',
 }
 
-// Role interface
-export interface IRole extends Document {
-  name: string;
-  description: string;
-  permissions: string[];
-  createdAt: Date;
-  updatedAt: Date;
+export enum CustomFieldType {
+  TEXT = 'text',
+  NUMBER = 'number',
+  DATE = 'date',
+  BOOLEAN = 'boolean',
+  LIST = 'list',
 }
 
-// Base interface for user data
-export interface IUserData {
+/**
+ * Type-safe base request parameters
+ */
+export interface BaseRequestParams {
+  [key: string]: string | undefined;
+}
+
+/**
+ * Custom field definitions
+ */
+export interface CustomField {
+  name: string;
+  type: CustomFieldType;
+  required?: boolean;
+  listOptions?: string[];
+  defaultValue?: unknown;
+  description?: string;
+}
+
+/**
+ * Base user interface with essential user information
+ */
+export interface IUser extends WithTimestamps {
+  _id: Types.ObjectId; // Add explicit _id typing
   email: string;
+  password: string;
   firstName: string;
   lastName: string;
   isActive: boolean;
   lastLogin?: Date;
-  roles: string[];
+  roles: Role[];
   permissions: string[];
+  tokenVersion?: number;
+  passwordChangedAt?: Date;
+  loginAttempts?: number;
+  lockUntil?: Date;
 }
 
-// Token payload interface
-export interface ITokenPayload {
-  userId: string;
-  email: string;
-  roles: string[];
-  permissions: string[];
-  iat?: number;
-  exp?: number;
+/**
+ * Allowed user roles enum for type safety
+ */
+export enum Role {
+  ADMIN = 'admin',
+  STAFF = 'staff',
+  USER = 'user',
+}
+/**
+ * Permission interface with strict action types
+ */
+export interface IPermission {
+  name: string;
+  description: string;
+  resource: string;
+  action: PermissionAction;
+  conditions?: Record<string, unknown>; // Optional conditions for fine-grained access control
 }
 
-// Request types
-export type RequestParams = Record<string, string>;
-export type RequestQuery = ParsedQs;
-export type RequestBody = Record<string, unknown>;
-
-// Extend Express Request type to include user
-export interface AuthenticatedRequest extends Request {
-  user?: ITokenPayload;
-  params: RequestParams;
-  query: RequestQuery;
-  body: RequestBody;
+/**
+ * Strict permission actions enum
+ */
+export enum PermissionAction {
+  CREATE = 'create',
+  READ = 'read',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  MANAGE = 'manage',
 }
 
-// User document interface for MongoDB
-export interface IUserDocument extends IUserData, Document {
+/**
+ * Customer group base interface
+ */
+export interface ICustomerGroup extends WithTimestamps {
+  name: string;
+  description?: string;
+  customFields: CustomField[];
+  customers: Types.ObjectId[];
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Customer group document interface for Mongoose
+ */
+export interface ICustomerGroupDocument extends ICustomerGroup, Document {
   _id: Types.ObjectId;
-  password: string;
+}
+
+/**
+ * Request body for creating/updating a customer group
+ */
+export interface CustomerGroupRequest {
+  name: string;
+  description?: string;
+  customFields?: CustomField[];
+  customers?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Request body for updating custom fields
+ */
+export interface UpdateCustomFieldsRequest {
+  customFields: CustomField[];
+}
+
+/**
+ * Response interface for customer group operations
+ */
+export interface CustomerGroupResponse {
+  _id: string;
+  name: string;
+  description?: string;
+  customFields: CustomField[];
+  customers: string[];
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/**
+ * Role interface with enhanced type safety
+ */
+export interface IRole {
+  name: Role;
+  description: string;
+  permissions: string[];
+  isSystem?: boolean; // To protect system-defined roles
+}
+
+/**
+ * Mongoose document interfaces with proper type inheritance
+ */
+export interface IUserDocument extends Omit<IUser, '_id'>, Document {
+  _id: Types.ObjectId;
   comparePassword(candidatePassword: string): Promise<boolean>;
   syncPermissions(): Promise<void>;
+  incrementLoginAttempts(): Promise<void>;
+  resetLoginAttempts(): Promise<void>;
+  isLocked(): boolean;
 }
 
-// Response interfaces
-export interface IUserResponse extends IUserData {
-  _id: Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
+export interface IPermissionDocument extends IPermission, Document {}
+
+export interface IRoleDocument extends IRole, Document {}
+
+/**
+ * Authentication user information for tokens
+ */
+export interface AuthUser {
+  _id: string;
+  userId: string;
+  email: string;
+  roles: Role[];
+  permissions: string[];
+  tokenVersion?: number;
+}
+
+/**
+ * Request/Response types with strict validation
+ */
+export interface LoginRequestBody {
+  email: string;
+  password: string;
+  deviceInfo?: DeviceInfo; // For multi-device support
+}
+
+export interface RegisterRequestBody {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  roles?: Role[]; // Only allowed for admin users
 }
 
 export interface ILoginResponse {
   accessToken: string;
   refreshToken: string;
   user: IUserResponse;
+  expiresIn: number;
 }
 
-// Request interfaces
-export interface IRegisterRequest {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  roles?: string[];
+export interface RegisterRequest extends AuthenticatedRequest {
+  body: RegisterRequestBody & {
+    deviceInfo?: Partial<DeviceInfo>;
+  };
 }
 
-// Base request types
-export interface BaseRequestBody extends Record<string, unknown> {
-  [key: string]: unknown;
+export interface LoginRequest extends AuthenticatedRequest {
+  body: LoginRequestBody & {
+    deviceInfo?: Partial<DeviceInfo>;
+  };
 }
 
-export interface BaseParams extends Record<string, string> {
-  [key: string]: string;
+export interface RefreshTokenRequest extends AuthenticatedRequest {
+  body: RefreshTokenRequestBody & {
+    deviceInfo?: Partial<DeviceInfo>;
+  };
 }
 
-// Type helper for authenticated controller requests
-export type TypedAuthRequest<
-  TBody extends BaseRequestBody = BaseRequestBody,
-  TParams extends BaseParams = BaseParams,
-  TQuery extends RequestQuery = RequestQuery,
-> = AuthenticatedRequest & {
-  body: TBody;
-  params: TParams;
-  query: TQuery;
-};
-
-// Specific request types
-export interface LoginRequestBody extends BaseRequestBody {
-  email: string;
-  password: string;
+export interface LogoutRequest extends AuthenticatedRequest {
+  body: LogoutRequestBody;
 }
 
-export interface RegisterRequestBody extends BaseRequestBody {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  roles?: string[];
-}
-
-export interface RefreshTokenRequestBody extends BaseRequestBody {
-  refreshToken: string;
-}
-
-export interface LogoutRequestBody extends BaseRequestBody {
-  refreshToken: string;
-}
-
-// Auth Service Error types
-export interface AuthError extends Error {
-  statusCode: number;
-  isOperational: boolean;
-}
-
-// Rate limiting types
-export interface RateLimitInfo {
-  windowMs: number;
-  max: number;
-  remaining: number;
-  resetTime: Date;
-}
-
-// Session types
-export interface SessionData {
+export interface DecodedToken {
   userId: string;
   email: string;
-  roles: string[];
+  roles: unknown; // Will be validated to Role[]
   permissions: string[];
+  tokenVersion?: number;
+}
+
+export interface IUserResponse {
+  _id: Types.ObjectId;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: Role[];
+  permissions: string[];
+  isActive: boolean;
+  lastLogin?: Date;
   createdAt: Date;
-  lastActive: Date;
+  updatedAt: Date;
 }
 
-// Auth service configuration
-export interface AuthConfig {
-  jwtSecret: string;
-  jwtRefreshSecret: string;
-  jwtExpiresIn: string;
-  jwtRefreshExpiresIn: string;
-  maxLoginAttempts: number;
-  lockoutDuration: number;
+/**
+ * Enhanced Express Request with authenticated user
+ *
+ * @template P - URL Parameters type, defaults to empty object
+ * @template ResB - Response Body type, defaults to unknown
+ * @template ReqB - Request Body type, defaults to unknown
+ * @template Q - Query Parameters type, defaults to ParsedQs
+ */
+export interface AuthenticatedRequest<
+  P extends BaseRequestParams = BaseRequestParams,
+  ResB = unknown,
+  ReqB = unknown,
+  Q extends ParsedQs = ParsedQs,
+> extends Request<P, ResB, ReqB, Q> {
+  user?: AuthUser;
+}
+/**
+ * Type helper for controller requests with proper typing
+ *
+ * @template B - Request Body type
+ * @template P - URL Parameters type
+ * @template Q - Query Parameters type
+ */
+export type TypedAuthRequest<
+  B extends Record<string, unknown> = Record<string, unknown>,
+  P extends BaseRequestParams = BaseRequestParams,
+  Q extends ParsedQs = ParsedQs,
+> = Omit<AuthenticatedRequest, 'body' | 'query' | 'params'> & {
+  body: B;
+  params: P;
+  query: Q;
+  user?: AuthUser;
+};
+
+/**
+ * Device information for token tracking and security
+ */
+export interface DeviceInfo {
+  deviceId: string;
+  deviceType: string;
+  deviceName?: string;
+  platform?: string;
+  browserName?: string;
+  browserVersion?: string;
+  ipAddress?: string;
+  location?: string;
 }
 
-// Role-based access control types
-export interface IRoleAssignment {
-  userId: Types.ObjectId;
-  roleId: Types.ObjectId;
-  assignedBy: Types.ObjectId;
-  assignedAt: Date;
+/**
+ * Token-related interfaces
+ */
+export interface ITokenPayload {
+  userId: string;
+  email: string;
+  roles: Role[];
+  permissions: string[];
+  tokenVersion?: number;
+  deviceId?: string;
 }
 
-export interface IPermissionAssignment {
-  roleId: Types.ObjectId;
-  permissionId: Types.ObjectId;
-  assignedBy: Types.ObjectId;
-  assignedAt: Date;
+export interface RefreshTokenRequestBody {
+  refreshToken: string;
+  deviceInfo?: DeviceInfo;
+}
+
+export interface LogoutRequestBody {
+  refreshToken: string;
+  allDevices?: boolean; // Option to logout from all devices
+}
+
+/**
+ * Session data interface
+ */
+export interface SessionData {
+  id: string;
+  userId: string;
+  deviceInfo: DeviceInfo;
+  createdAt: Date;
+  expiresAt: Date;
+  lastActivity: Date;
+}
+
+/**
+ * Authentication options for fine-tuned control
+ */
+export interface AuthOptions {
+  expiresIn?: string | number;
+  refreshExpiresIn?: string | number;
+  issuer?: string;
+  audience?: string;
+  clockTolerance?: number;
+  maxLoginAttempts?: number;
+  lockoutDuration?: number;
+  requireEmailVerification?: boolean;
+}
+
+/**
+ * Permission check options
+ */
+export interface PermissionCheckOptions {
+  requireAll?: boolean;
+  resourceId?: string;
+  conditions?: Record<string, unknown>;
+}
+
+/**
+ * Rate limiting configuration
+ */
+export interface RateLimitConfig {
+  windowMs: number;
+  max: number;
+  message?: string;
+  statusCode?: number;
+  skipSuccessfulRequests?: boolean;
+  keyGenerator?: (req: Request) => string;
 }

@@ -2,12 +2,17 @@
 import type { Router as ExpressRouter, Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
 import os from 'node:os';
+
 import authRoutes from './auth.routes.js';
 import customerRoutes from './customer.routes.js';
+
 import { auth, checkRole } from '@/middleware/auth.middleware.js';
-import { notFound, ApiError } from '@/middleware/error-handler.js';
+import { notFound } from '@/middleware/error-handler.js';
+import express from 'express';
+import { AppError, ErrorCode } from '@/utils/error-service.js';
 import { rateLimit } from 'express-rate-limit';
 import { logger } from '@/utils/logger.js';
+import { Role } from '@/types/auth.js';
 
 /**
  * Interface definitions for type safety and documentation
@@ -120,7 +125,7 @@ router.get('/health', (_req: Request, res: Response<HealthCheckResponse>) => {
 router.get(
   '/system-info',
   auth,
-  checkRole(['admin']),
+  checkRole([Role.ADMIN]),
   (_req: Request, res: Response<SystemInfoResponse>) => {
     try {
       const systemInfo: SystemInfoResponse = {
@@ -137,7 +142,11 @@ router.get(
       res.status(200).json(systemInfo);
     } catch (error) {
       logger.error('Error retrieving system info:', error);
-      throw new ApiError(500, 'Failed to retrieve system information');
+      throw new AppError(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        'Failed to retrieve system information',
+        500,
+      );
     }
   },
 );
@@ -148,15 +157,14 @@ const API_VERSION = process.env.API_VERSION || '/v1';
 // Public routes (no authentication required)
 router.use(`${API_VERSION}/auth`, apiLimiter, authRoutes);
 
-// Protected routes
 router.use(`${API_VERSION}/customers`, apiLimiter, customerRoutes);
 
 // Catch-all route for undefined endpoints
 router.all('*', (req: Request, _res: Response, next: NextFunction) => {
-  next(new ApiError(404, `Cannot ${req.method} ${req.originalUrl}`));
+  next(new AppError(ErrorCode.RESOURCE_NOT_FOUND, `Cannot ${req.method} ${req.originalUrl}`, 404));
 });
 
-// Handle 404 routes
-router.use(notFound);
+// Handle 404 routes - use as middleware
+router.use('*', notFound as express.RequestHandler);
 
 export default router;
