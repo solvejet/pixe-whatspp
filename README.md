@@ -6,47 +6,53 @@ A highly scalable, secure, and maintainable Node.js backend built with TypeScrip
 
 ### System Overview
 
+### System Overview
+
 ```mermaid
-flowchart TB
-    subgraph Client Layer
-        Client[Client Applications]
+graph TB
+    subgraph ClientLayer["Client Layer"]
+        Client["Client Applications"]
     end
 
-    subgraph Load Balancer
-        LB[Load Balancer/Nginx]
+    subgraph LoadBalancer["Load Balancer"]
+        LB["Load Balancer/Nginx"]
     end
 
-    subgraph Application Layer
-        subgraph Worker Nodes
-            W1[Worker 1]
-            W2[Worker 2]
-            W3[Worker N]
+    subgraph AppLayer["Application Layer"]
+        subgraph Workers["Worker Nodes"]
+            W1["Worker 1"]
+            W2["Worker 2"]
+            W3["Worker N"]
         end
 
-        subgraph Services
-            Auth[Auth Service]
-            Customer[Customer Service]
-            Audit[Audit Service]
+        subgraph AppServices["Services"]
+            Auth["Auth Service"]
+            Customer["Customer Service"]
+            Audit["Audit Service"]
         end
 
-        subgraph Middleware
-            M1[Rate Limiter]
-            M2[Request Validator]
-            M3[Auth Middleware]
-            M4[Error Handler]
+        subgraph MiddlewareStack["Middleware"]
+            M1["Rate Limiter"]
+            M2["Request Validator"]
+            M3["Auth Middleware"]
+            M4["Error Handler"]
         end
     end
 
-    subgraph Data Layer
-        MongoDB[(MongoDB)]
-        Redis[(Redis)]
-        RMQ[RabbitMQ]
+    subgraph DataLayer["Data Layer"]
+        MongoDB[("MongoDB")]
+        Redis[("Redis")]
+        RMQ["RabbitMQ"]
     end
 
     Client --> LB
-    LB --> Worker Nodes
-    Worker Nodes --> Services
-    Services --> Middleware
+    LB --> W1
+    LB --> W2
+    LB --> W3
+    W1 --> AppServices
+    W2 --> AppServices
+    W3 --> AppServices
+    AppServices --> MiddlewareStack
     Auth --> MongoDB
     Auth --> Redis
     Customer --> MongoDB
