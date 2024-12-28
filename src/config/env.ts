@@ -12,6 +12,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   API_VERSION: z.string().default('v1'),
   ALLOWED_ORIGINS: z.string().default('*'),
+  API_BASE_URL: z.string().default('http://localhost:4000'),
 
   // JWT Tokens
   JWT_SECRET: z.string().min(32),
@@ -88,6 +89,30 @@ const envSchema = z.object({
   CHAT_TYPING_TIMEOUT: z.coerce.number().default(5000), // 5 seconds
   CHAT_FILE_UPLOAD_MAX_SIZE: z.coerce.number().default(5242880), // 5MB in bytes
   CHAT_ALLOWED_FILE_TYPES: z.string().default('image/jpeg,image/png,application/pdf'),
+
+  // Exotel Configuration
+  EXOTEL_API_URL: z.string().default('https://api.exotel.com'),
+  EXOTEL_ACCOUNT_SID: z.string({
+    required_error: 'Exotel Account SID is required',
+    invalid_type_error: 'Exotel Account SID must be a string',
+  }),
+  EXOTEL_API_KEY: z.string({
+    required_error: 'Exotel API Key is required',
+    invalid_type_error: 'Exotel API Key must be a string',
+  }),
+  EXOTEL_API_TOKEN: z.string({
+    required_error: 'Exotel API Token is required',
+    invalid_type_error: 'Exotel API Token must be a string',
+  }),
+  EXOTEL_CALLER_ID: z.string({
+    required_error: 'Exotel Caller ID is required',
+    invalid_type_error: 'Exotel Caller ID must be a string',
+  }),
+  EXOTEL_RECORD_CALLS: z.coerce.boolean().default(true),
+  EXOTEL_RECORDING_FORMAT: z.enum(['mp3', 'mp3-hq']).default('mp3'),
+  EXOTEL_RECORDING_CHANNELS: z.enum(['single', 'dual']).default('single'),
+  EXOTEL_CALL_TIMEOUT: z.coerce.number().default(45), // 45 seconds
+  EXOTEL_MAX_CALL_DURATION: z.coerce.number().default(3600), // 1 hour
 });
 
 // Export the type for use in other files
@@ -119,6 +144,10 @@ if (isProduction) {
     'WHATSAPP_WEBHOOK_VERIFY_TOKEN',
     'WHATSAPP_API_VERSION',
     'WHATSAPP_BUSINESS_ID',
+    'EXOTEL_ACCOUNT_SID',
+    'EXOTEL_API_KEY',
+    'EXOTEL_API_TOKEN',
+    'EXOTEL_CALLER_ID',
   ];
 
   const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);

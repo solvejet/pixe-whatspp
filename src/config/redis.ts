@@ -44,6 +44,42 @@ class RedisService {
     });
   }
 
+  public async hIncrBy(key: string, field: string, increment: number): Promise<number> {
+    try {
+      return await this.client.hIncrBy(key, field, increment);
+    } catch (error) {
+      logger.error('Redis hIncrBy error:', error);
+      throw error;
+    }
+  }
+
+  public async sAdd(key: string, member: string): Promise<number> {
+    try {
+      return await this.client.sAdd(key, member);
+    } catch (error) {
+      logger.error('Redis sAdd error:', error);
+      throw error;
+    }
+  }
+
+  public async hSet(key: string, data: Record<string, string>): Promise<number> {
+    try {
+      return await this.client.hSet(key, data);
+    } catch (error) {
+      logger.error('Redis hSet error:', error);
+      throw error;
+    }
+  }
+
+  public async setExpiry(key: string, seconds: number): Promise<boolean> {
+    try {
+      return await this.client.expire(key, seconds);
+    } catch (error) {
+      logger.error('Redis setExpiry error:', error);
+      throw error;
+    }
+  }
+
   /**
    * Create a duplicate Redis client instance
    * Useful for pub/sub functionality

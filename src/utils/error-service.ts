@@ -54,6 +54,9 @@ export enum ErrorCode {
   CACHE_ERROR = 9001,
   CACHE_MISS = 9002,
   CACHE_INVALID = 9003,
+
+  // Whatsapp Message Handling
+  MESSAGE_HANDLING_ERROR = 8090,
 }
 
 export interface ErrorMetadata {

@@ -1,0 +1,121 @@
+Status Code
+200
+
+OK - Everything went as planned.
+
+202
+
+Accepted - Request accepted.
+
+400
+
+Bad Request - Something in your header or request body was malformed.
+
+401
+
+Unauthorised - Necessary credentials were either missing or invalid.
+
+402
+
+Payment Required - The action is not available on your plan, or you have exceeded usage limits for your current plan.
+
+403
+
+Your credentials are valid, but you don’t have access to the requested resource.
+
+404
+
+Not Found - The object you’re requesting doesn’t exist.
+
+409
+
+Conflict - You might be trying to update the same resource concurrently.
+
+429
+
+Too Many Requests - You are calling our APIs more frequently than we allow.
+
+5xx
+
+Server Errors - Something went wrong on our end. Please try again.
+
+curl --location --request POST 'https://api.exotel.com/v1/Accounts/<account_sid>/Calls/connect' \
+--header 'Authorization: Basic <Base64_Encoded_APIKey:APIToken>' \
+--form 'From="+91XXXXXXXXXX"' \
+--form 'To="+91XXXXXXXXXX"' \
+--form 'CallerId="XXXXXXXXXX"' \
+--form 'StatusCallback="https://yourstatuscallbackurl.com"' \
+--form 'StatusCallbackContentType="application/json"' \
+--form 'StatusCallbackEvents[0]="terminal"' \
+--form 'Record="true"' \
+--form 'StatusCallbackEvents[1]="answered"'
+
+Parameter Name	Mandatory / Optional	Value
+From	Mandatory	String; The phone number that will be called first. Preferably in E.164 format. If not set, our system will try to match it with a country and make a call. If landline number, prefix it with STD code; Ex: 080XXXX2400
+To	Mandatory	String; Your customer's phone number. If landline number, prefix it with STD code; Ex: 080XXXX2400
+CallerId	Mandatory	String; This is your ExoPhone/Exotel Virtual Number (pick one from here)
+CallType	Optional	String; trans - for Transactional Calls
+TimeLimit	Optional	Integer; The time limit (in seconds) that you want this call to last. The call will be cut after this time (max. 14400 i.e. 4 hours)
+TimeOut	Optional	Integer; The time (in seconds) to ring the called parties (both first and second call leg)
+WaitUrl	Optional	
+String; Play this audio to the caller. When the first leg (From) has to wait for the other leg (To) to pick up the call, the audio file specified in this parameter will be played.
+
+Please refer this article to understand the format specifications of the audio file to be played (wav is only supported).
+
+Guidelines on usage:
+
+The audio file size is recommended to be less than 2MB. Please note, Exotel will cache the wav file. During the first few call attempts of setting this parameter, user might hear normal ringing tone for first 5 seconds (for a ~2MB file). This is only temporary for initial few calls and once the audio file is cached, audio will be played out smoothly.
+In case you decide to change the audio file later, the WaitUrl should be different (as Exotel will cache audio file based on URL). You can do so by hosting the audio file with a different name.
+When using this parameter, it is recommended to set the TimeOut parameter as well.
+Example: "http://{your_hosted_endpoint}/{audio file name}.wav"
+
+Record	Optional	
+Boolean; Record the conversation of your call. The RecordingUrl will be sent to the StatusCallback URL if this is set to 'true' and the call conversation happens. Can be:
+
+true - Call conversation will be recorded.
+false (default) - Call conversation will not be recorded.
+Note:- If this optional parameter is not passed then by default, calls will NOT be recorded. 
+
+RecordingChannels	Optional	
+String; Number of audio channels to be present in the final recording. This parameter works if Record is set to 'true'. Can be:
+
+single (default) - Record both legs of the call in a single channel of the recording file.
+dual - Record the caller and the callee into separate channels of the recording file.
+RecordingFormat	Optional	
+String; Quality of the audio recording. This parameter works if Record is set to 'true'. Can be:
+
+mp3 (default) - Standard bitrate recording
+mp3-hq - Higher bitrate (32 kbps/channel )recording.
+Note:- mp3-hq option is an on-demand feature. Please reach out to hello@exotel.com or your account manager to get it enabled for your account before using this option.
+
+CustomField	Optional	
+Any application specific value like order id that will be passed back as a parameter in StatusCallback (only via 'terminal' StatusCallbackEvent)
+
+StartPlaybackToNew	Optional	
+String; The party that should listen the playback at the start of the call. Audio to be listened by agent or both customer and agent just before the call gets connected. Can be:
+
+Callee (default) - Playback audio will be played to callee only.
+Both - Playback audio will be played to both caller and callee.
+StartPlaybackValueNew	Optional	
+String; URL for the audio to be played just before the call gets connected.
+
+Configuration for audio file supported in this playback are:
+Sample Rate = 8 kHz
+Bit depth = 16 bit
+Bit rate = 128 kbps
+Channel = mono
+File Format = wav
+
+StatusCallback	Optional	String; An HTTP POST request will be made to this URL depending on what events are subscribed using ‘StatusCallbackEvents’. Refer here for complete list of parameters which will be sent to your endpoint.
+StatusCallbackEvents New	Optional	
+Array; Call events for which we will send details to the URL as set in ‘StatusCallback’ parameter. Can be:
+
+terminal - This event will be triggered once the call is terminated (with or without being answered). 
+answered - This event will be triggered when each leg of the call is answered. One for the caller and one for the callee.
+If no event is specified, we will send the default parameters as specified here. Currently, only ‘terminal’ and ‘answered’ event is supported but more events could be added in future.
+
+StatusCallbackContentType New	Optional	
+String; The HTTP header ‘Content-Type’ using which the StatusCallback webhook will be triggered to your URL. Can be:
+
+multipart/form-data (default)
+application/json

@@ -334,4 +334,4 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-For support, email support@example.com or join our Slack channel.
+For support, email karansxa@gmail.com or Whatsapp - +91 8910750026
