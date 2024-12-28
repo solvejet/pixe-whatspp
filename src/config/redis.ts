@@ -22,7 +22,15 @@ class RedisService {
   private readonly reconnectMaxDelay = 3000;
 
   constructor() {
-    this.client = createClient({
+    this.client = this.createRedisClient();
+    this.setupEventHandlers(this.client);
+  }
+
+  /**
+   * Create a new Redis client with default configuration
+   */
+  private createRedisClient(): RedisClient {
+    return createClient({
       url: env.REDIS_URL,
       password: env.REDIS_PASSWORD,
       socket: {
@@ -34,26 +42,34 @@ class RedisService {
         },
       },
     });
-
-    this.setupEventHandlers();
   }
 
-  private setupEventHandlers(): void {
-    this.client.on('connect', () => {
+  /**
+   * Create a duplicate Redis client instance
+   * Useful for pub/sub functionality
+   */
+  public getDuplicateInstance(): RedisClient {
+    const duplicateClient = this.createRedisClient();
+    this.setupEventHandlers(duplicateClient);
+    return duplicateClient;
+  }
+
+  private setupEventHandlers(client: RedisClient): void {
+    client.on('connect', () => {
       logger.info('Redis client connecting');
     });
 
-    this.client.on('ready', () => {
+    client.on('ready', () => {
       this.isConnected = true;
       logger.info('Redis client connected and ready');
     });
 
-    this.client.on('error', (err: Error) => {
+    client.on('error', (err: Error) => {
       this.isConnected = false;
       logger.error('Redis Client Error:', err);
     });
 
-    this.client.on('end', () => {
+    client.on('end', () => {
       this.isConnected = false;
       logger.info('Redis client disconnected');
     });

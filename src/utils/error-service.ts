@@ -62,6 +62,7 @@ export interface ErrorMetadata {
   details?: Record<string, unknown>;
   source?: string;
   timestamp?: Date;
+  channel?: MessageChannel; // Add this line
 }
 
 export interface SerializedError {

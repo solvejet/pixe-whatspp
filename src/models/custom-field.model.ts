@@ -49,9 +49,7 @@ const customFieldSchema = new Schema<ICustomFieldDocument>(
     name: {
       type: String,
       required: [true, 'Field name is required'],
-      unique: true,
       trim: true,
-      index: true,
       validate: {
         validator: (value: string): boolean => /^[a-zA-Z][a-zA-Z0-9_]*$/.test(value),
         message:

@@ -1,0 +1,34 @@
+Upload Media
+curl -X POST 'https://graph.facebook.com/v21.0/<PHONE_NUMBER_ID>/media' \
+-H 'Authorization: Bearer <ACCESS_TOKEN>' \
+-F 'file=@"2jC60Vdjn/cross-trainers-summer-sale.jpg"' \
+-F 'type="image/jpeg"' \
+-F 'messaging_product="whatsapp"'
+
+Response
+{
+  "id":"<MEDIA_ID>"
+}
+
+Retrieve Media
+curl -X GET 'https://graph.facebook.com/v21.0/<MEDIA_ID>/' \
+-H 'Authorization: Bearer <ACCESS_TOKEN>'
+
+Response
+{
+  "messaging_product": "whatsapp",
+  "url": "<URL>",
+  "mime_type": "<MIME_TYPE>",
+  "sha256": "<HASH>",
+  "file_size": "<FILE_SIZE>",
+  "id": "<MEDIA_ID>"
+}
+
+Delete Media
+curl -X DELETE 'https://graph.facebook.com/v21.0/<MEDIA_ID>' \
+-H 'Authorization: Bearer <ACCESS_TOKEN>'
+
+Response
+{
+  "success": true
+}

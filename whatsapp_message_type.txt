@@ -1,0 +1,329 @@
+Text Message
+
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "+16505551234",
+  "type": "text",
+  "text": {
+    "preview_url": true,
+    "body": "As requested, here'\''s the link to our latest product: https://www.meta.com/quest/quest-3/"
+  }
+}'
+
+Address Message
+curl -X  POST \
+'https://graph.facebook.com/v15.0/FROM_PHONE_NUMBER_ID/messages' \
+-H 'Authorization: Bearer ACCESS_TOKEN' \
+-H 'Content-Type: application/json' \
+-d '{
+          "messaging_product": "whatsapp",
+          "recipient_type": "individual",
+          "to": "PHONE_NUMBER",
+          "type": "interactive",
+          "interactive": {
+              "type": "address_message",
+              "body": {
+                   "text": "Thanks for your order! Tell us what address you’d like this order delivered to."
+              },
+              "action": {
+                   "name": "address_message",
+                   "parameters": {
+                      "country" :"COUNTRY_ISO_CODE"
+                   }
+              }
+          }
+    }' 
+
+Field supported name, phone_number, in_pin_code, sg_post_code, house_number, floor_number, tower_number, building_name, address, landmark_are, unit_number, city, state
+
+Audio Message
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "+16505551234",
+  "type": "audio",
+  "audio": {
+    "id" : "3674626312780147"
+  }
+}'
+
+audio types supported - AAC(16mb), AMR(16MB), MP3 (16MB), MP4 Audio(16MB), OGG(16 MB)
+
+Contact Message
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d ' {
+  "messaging_product": "whatsapp",
+  "to": "<WHATSAPP_USER_PHONE_NUMBER>",
+  "type": "contacts",
+  "contacts": [
+    {
+      "addresses": [
+        {
+          "street": "<STREET_NUMBER_AND_NAME>",
+          "city": "<CITY>",
+          "state": "<STATE_CODE>",
+          "zip": "<ZIP_CODE>",
+          "country": "<COUNTRY_NAME>",
+          "country_code": "<COUNTRY_CODE>",
+          "type": "<ADDRESS_TYPE>"
+        }
+        /* Additional addresses objects go here, if using */
+      ],
+      "birthday": "<BIRTHDAY>",
+      "emails": [
+        {
+          "email": "<EMAIL_ADDRESS>",
+          "type": "<EMAIL_TYPE>"
+        }
+        */ Additional emails objects go here, if using */
+      ],
+      "name": {
+        "formatted_name": "<FULL_NAME>",
+        "first_name": "<FIRST_NAME>",
+        "last_name": "<LAST_NAME>",
+        "middle_name": "<MIDDLE_NAME>",
+        "suffix": "<SUFFIX>",
+        "prefix": "<PREFIX>"
+      },
+      "org": {
+        "company": "<COMPANY_OR_ORG_NAME>",
+        "department": "<DEPARTMENT_NAME>",
+        "title": "<JOB_TITLE>"
+      },
+      "phones": [
+        {
+          "phone": "<PHONE_NUMBER>",
+          "type": "<PHONE_NUMBER_TYPE>",
+          "wa_id": "<WHATSAPP_USER_ID>"
+        }
+        /* Additional phones objects go here, if using */
+      ],
+      "urls": [
+        {
+          "url": "<WEBSITE_URL>",
+          "type": "<WEBSITE_TYPE>"
+        },
+        /* Additional URLs go here, if using */
+      ]
+    }
+  ]
+}'
+
+Document Message
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "+16505551234",
+  "type": "text",
+  "text": {
+    "preview_url": true,
+    "body": "As requested, here'\''s the link to our latest product: https://www.meta.com/quest/quest-3/"
+  }
+}'
+
+Supported Doc - .txt, .xls, .xlsx, .doc, .docx, .ppt, .pptx, .pdf - 100MB limit
+
+Image Message
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "+16505551234",
+  "type": "image",
+  "image": {
+    "id" : "1479537139650973",
+    "caption": "The best succulent ever?"
+  }
+}'
+
+Supported Types - JPEG, PNG - 5MB
+
+Video Message
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "+16505551234",
+  "type": "video",
+  "video": {
+    "id" : "1166846181421424",
+    "caption": "A succulent eclipse!"
+  }
+}'
+
+Supported Type 3GPP MP4 - 16MB Limit
+
+Interactive CTA URL Button - 
+
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '{
+    "messaging_product": "whatsapp",
+    "recipient_type": "individual",
+    "to": "+16505555555",
+    "type": "interactive",
+    "interactive": {
+        "type": "cta_url",
+        "header": {
+            "text": "Available Dates"
+        },
+        "body": {
+            "text": "Tap the button below to see available dates."
+        },
+        "footer": {
+            "text": "Dates subject to change."
+        },
+        "action": {
+            "name": "cta_url",
+            "parameters": {
+                "display_text": "See Dates",
+                "url": "https://www.luckyshrub.com?clickID=kqDGWd24Q5TRwoEQTICY7W1JKoXvaZOXWAS7h1P76s0R7Paec4"
+            }
+        }
+    }
+}'
+
+Interactive List
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "+16505551234",
+  "type": "interactive",
+  "interactive": {
+    "type": "list",
+    "header": {
+      "type": "text",
+      "text": "Choose Shipping Option"
+    },
+    "body": {
+      "text": "Which shipping option do you prefer?"
+    },
+    "footer": {
+      "text": "Lucky Shrub: Your gateway to succulents™"
+    },
+    "action": {
+      "button": "Shipping Options",
+      "sections": [
+        {
+          "title": "I want it ASAP!",
+          "rows": [
+            {
+              "id": "priority_express",
+              "title": "Priority Mail Express",
+              "description": "Next Day to 2 Days"
+            },
+            {
+              "id": "priority_mail",
+              "title": "Priority Mail",
+              "description": "1–3 Days"
+            }
+          ]
+        },
+        {
+          "title": "I can wait a bit",
+          "rows": [
+            {
+              "id": "usps_ground_advantage",
+              "title": "USPS Ground Advantage",
+              "description": "2–5 Days"
+            },
+            {
+              "id": "media_mail",
+              "title": "Media Mail",
+              "description": "2–8 Days"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}'
+
+Interactive Reply Button
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "+16505551234",
+  "type": "interactive",
+  "interactive": {
+    "type": "button",
+    "header": {
+      "type": "image",
+      "image": {
+        "id": "2762702990552401"
+      }
+    },
+    "body": {
+      "text": "Hi Pablo! Your gardening workshop is scheduled for 9am tomorrow. Use the buttons if you need to reschedule. Thank you!"
+    },
+    "footer": {
+      "text": "Lucky Shrub: Your gateway to succulents!™"
+    },
+    "action": {
+      "buttons": [
+        {
+          "type": "reply",
+          "reply": {
+            "id": "change-button",
+            "title": "Change"
+          }
+        },
+        {
+          "type": "reply",
+          "reply": {
+            "id": "cancel-button",
+            "title": "Cancel"
+          }
+        }
+      ]
+    }
+  }
+}'
+
+Location Message
+curl 'https://graph.facebook.com/v21.0/106540352242922/messages' \
+-H 'Content-Type: application/json' \
+-H 'Authorization: Bearer EAAJB...' \
+-d '{
+    "messaging_product": "whatsapp",
+    "recipient_type": "individual",
+    "to": "+16505551234",
+    "type": "location",
+    "location": {
+        "latitude": "37.44216251868683",
+        "longitude": "-122.16153582049394",
+        "name": "Philz Coffee",
+        "address": "101 Forest Ave, Palo Alto, CA 94301"
+    }
+}'
+
+
+and then there is Template Message

@@ -290,10 +290,10 @@ class ServerManager {
       await serviceManager.initializeServices();
 
       // Create HTTP server
-      this.server = createServer(app);
+      const httpServer = createServer(app);
 
       // Handle server errors
-      this.server.on('error', (error: SystemError) => {
+      httpServer.on('error', (error: SystemError) => {
         if (error.code === 'EADDRINUSE') {
           logger.error(`Port ${this.port} is already in use`);
           process.exit(1);
@@ -303,7 +303,7 @@ class ServerManager {
       });
 
       // Start listening
-      this.server.listen(this.port, () => {
+      httpServer.listen(this.port, () => {
         if (this.startupTimeout) {
           clearTimeout(this.startupTimeout);
           this.startupTimeout = null;
@@ -313,6 +313,9 @@ class ServerManager {
           process.send('ready');
         }
       });
+
+      // Assign server instance
+      this.server = httpServer;
 
       // Handle process messages
       this.setupWorkerMessageHandlers();
