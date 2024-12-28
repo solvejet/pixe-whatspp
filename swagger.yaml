@@ -1,40 +1,28 @@
 openapi: 3.0.3
 info:
-  title: Enterprise Node.js Backend API
+  title: Customer Management API
   description: |
-    A highly scalable, secure, and maintainable Node.js backend API with robust authentication, 
-    permission-based access control, and comprehensive audit logging.
+    API documentation for the Customer Management System with authentication, 
+    customer management, custom fields, and media handling capabilities.
   version: 1.0.0
   contact:
-    name: karansxa
-  license:
-    name: ISC
-    url: https://opensource.org/licenses/ISC
+    name: API Support
+    email: support@example.com
 
 servers:
-  - url: http://localhost:4000/api/v1
-    description: Local Development
-  - url: https://api.example.com/v1
-    description: Production Environment
+  - url: /api/v1
+    description: API Version 1
 
-tags:
-  - name: Authentication
-    description: Authentication and authorization endpoints
-  - name: Customers
-    description: Customer management endpoints
-  - name: Customer Groups
-    description: Customer group management endpoints
-  - name: System
-    description: System and health check endpoints
-
+# Security Schemes
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token obtained from login or token refresh
-
+      description: JWT token for authentication
+  
+  # Reusable schemas for requests/responses
   schemas:
     Error:
       type: object
@@ -59,8 +47,19 @@ components:
                 type: string
               details:
                 type: object
-                additionalProperties: true
+    
+    Success:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+        data:
+          type: object
 
+    # Auth Schemas
     LoginRequest:
       type: object
       required:
@@ -74,7 +73,7 @@ components:
           type: string
           minLength: 8
         deviceInfo:
-          $ref: "#/components/schemas/DeviceInfo"
+          $ref: '#/components/schemas/DeviceInfo'
 
     RegisterRequest:
       type: object
@@ -90,15 +89,23 @@ components:
         password:
           type: string
           minLength: 8
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
         firstName:
           type: string
           minLength: 2
+          maxLength: 50
         lastName:
           type: string
           minLength: 2
+          maxLength: 50
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [admin, staff, user]
         deviceInfo:
-          $ref: "#/components/schemas/DeviceInfo"
-
+          $ref: '#/components/schemas/DeviceInfo'
+    
     DeviceInfo:
       type: object
       properties:
@@ -124,12 +131,13 @@ components:
           type: string
         refreshToken:
           type: string
+        user:
+          $ref: '#/components/schemas/UserResponse'
         expiresIn:
           type: integer
-        user:
-          $ref: "#/components/schemas/User"
+          description: Token expiration time in seconds
 
-    User:
+    UserResponse:
       type: object
       properties:
         _id:
@@ -144,7 +152,6 @@ components:
           type: array
           items:
             type: string
-            enum: [admin, staff, user]
         permissions:
           type: array
           items:
@@ -161,19 +168,28 @@ components:
           type: string
           format: date-time
 
-    Customer:
+    # Customer Schemas
+    CustomerRequest:
       type: object
+      required:
+        - name
+        - phoneNumber
+        - countryCode
+        - assignedAdmin
       properties:
-        _id:
-          type: string
         name:
           type: string
+          minLength: 2
+          maxLength: 100
         phoneNumber:
           type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
         countryCode:
           type: string
+          pattern: '^[A-Z]{2}$'
         assignedAdmin:
-          $ref: "#/components/schemas/AdminInfo"
+          type: string
+          format: uuid
         status:
           type: string
           enum: [active, inactive, pending, blocked]
@@ -183,7 +199,51 @@ components:
         groups:
           type: array
           items:
-            $ref: "#/components/schemas/GroupInfo"
+            type: string
+            format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    CustomerResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phoneNumber:
+          type: string
+        countryCode:
+          type: string
+        assignedAdmin:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+        status:
+          type: string
+        customFields:
+          type: object
+        groups:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
         tags:
           type: array
           items:
@@ -193,7 +253,6 @@ components:
           format: date-time
         metadata:
           type: object
-          additionalProperties: true
         createdAt:
           type: string
           format: date-time
@@ -201,54 +260,8 @@ components:
           type: string
           format: date-time
 
-    AdminInfo:
-      type: object
-      properties:
-        id:
-          type: string
-        email:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-
-    GroupInfo:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-
-    CustomerGroup:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        customFields:
-          type: array
-          items:
-            $ref: "#/components/schemas/CustomField"
-        customersCount:
-          type: integer
-        metadata:
-          type: object
-          additionalProperties: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    CustomField:
+    # Custom Fields Schemas
+    CustomFieldRequest:
       type: object
       required:
         - name
@@ -256,6 +269,7 @@ components:
       properties:
         name:
           type: string
+          pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
         type:
           type: string
           enum: [text, number, date, boolean, list]
@@ -266,290 +280,866 @@ components:
           items:
             type: string
         defaultValue:
-          type: string
+          type: object
         description:
           type: string
-
-    CustomerStatistics:
-      type: object
-      properties:
-        statusDistribution:
-          type: array
-          items:
-            type: object
-            properties:
-              _id:
-                type: string
-              count:
-                type: integer
-        groupDistribution:
-          type: array
-          items:
-            type: object
-            properties:
-              _id:
-                type: string
-              name:
-                type: string
-              count:
-                type: integer
-        timeline:
-          type: array
-          items:
-            type: object
-            properties:
-              _id:
-                type: object
-                properties:
-                  year:
-                    type: integer
-                  month:
-                    type: integer
-                  day:
-                    type: integer
-              count:
-                type: integer
-        total:
-          type: integer
-
-    HealthCheckResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [ok, error]
-        timestamp:
-          type: string
-          format: date-time
-        version:
-          type: string
-        environment:
-          type: string
-        memoryUsage:
+        validation:
           type: object
           properties:
-            heapUsed:
-              type: integer
-            heapTotal:
-              type: integer
-            external:
-              type: integer
-            rss:
-              type: integer
-        uptime:
-          type: integer
+            min:
+              type: number
+            max:
+              type: number
+            pattern:
+              type: string
+            message:
+              type: string
 
+    CustomFieldResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        required:
+          type: boolean
+        listOptions:
+          type: array
+          items:
+            type: string
+        defaultValue:
+          type: object
+        description:
+          type: string
+        validation:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Media Schemas
+    MediaUploadResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        originalName:
+          type: string
+        status:
+          type: string
+          enum: [pending, uploading, uploaded, failed, deleted]
+        type:
+          type: string
+          enum: [image, video, audio, document]
+        url:
+          type: string
+
+    MediaResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        originalName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: number
+        type:
+          type: string
+        url:
+          type: string
+        status:
+          type: string
+        uploadedBy:
+          type: string
+        error:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+# Global Security
+security:
+  - bearerAuth: []
+
+# API Paths
 paths:
+  # Auth Routes
   /auth/register:
     post:
       tags:
         - Authentication
       summary: Register a new user
-      operationId: register
+      security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RegisterRequest"
+              $ref: '#/components/schemas/RegisterRequest'
       responses:
-        "201":
+        '201':
           description: User registered successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "400":
-          description: Invalid input
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Validation error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "409":
+                $ref: '#/components/schemas/Error'
+        '409':
           description: Email already exists
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
 
   /auth/login:
     post:
       tags:
         - Authentication
-      summary: Authenticate user and get token
-      operationId: login
+      summary: User login
+      security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginRequest"
+              $ref: '#/components/schemas/LoginRequest'
       responses:
-        "200":
+        '200':
           description: Login successful
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
-        "401":
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+        '401':
           description: Invalid credentials
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "423":
+                $ref: '#/components/schemas/Error'
+        '423':
           description: Account locked
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
 
-  /customers:
+  /auth/refresh-token:
     post:
       tags:
-        - Customers
-      summary: Create a new customer
-      security:
-        - bearerAuth: []
+        - Authentication
+      summary: Refresh access token
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Customer"
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
       responses:
-        "201":
-          description: Customer created successfully
+        '200':
+          description: Token refreshed successfully
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Customer"
-        "400":
-          description: Invalid input
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid refresh token
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: Insufficient permissions
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
+                $ref: '#/components/schemas/Error'
 
-  /customers/{id}:
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                allDevices:
+                  type: boolean
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  # Customer Routes
+  /customers:
     get:
       tags:
         - Customers
-      summary: Get customer by ID
-      security:
-        - bearerAuth: []
+      summary: List customers
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Customer found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Customer"
-        "404":
-          description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /customers/statistics:
-    get:
-      tags:
-        - Customers
-      summary: Get customer statistics
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: fromDate
-          in: query
-          schema:
-            type: string
-            format: date-time
-        - name: toDate
-          in: query
-          schema:
-            type: string
-            format: date-time
-      responses:
-        "200":
-          description: Statistics retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CustomerStatistics"
-
-  /customers/groups:
-    get:
-      tags:
-        - Customer Groups
-      summary: List all customer groups
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
+        - in: query
+          name: page
           schema:
             type: integer
             minimum: 1
             default: 1
-        - name: limit
-          in: query
+        - in: query
+          name: limit
           schema:
             type: integer
             minimum: 1
             maximum: 100
             default: 10
-        - name: search
-          in: query
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          customers:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/CustomerResponse'
+                          total:
+                            type: integer
+                          pages:
+                            type: integer
+
+    post:
+      tags:
+        - Customers
+      summary: Create customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CustomerResponse'
+
+  /customers/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Customers
+      summary: Get customer by ID
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CustomerResponse'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Customers
+      summary: Update customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+      responses:
+        '200':
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CustomerResponse'
+
+    delete:
+      tags:
+        - Customers
+      summary: Delete customer
+      responses:
+        '204':
+          description: Customer deleted successfully
+
+  # Custom Fields Routes
+  /customers/fields:
+    get:
+      tags:
+        - Custom Fields
+      summary: List custom fields
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: List of custom fields
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          fields:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/CustomFieldResponse'
+                          total:
+                            type: integer
+                          pages:
+                            type: integer
+
+    post:
+      tags:
+        - Custom Fields
+      summary: Create custom field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomFieldRequest'
+      responses:
+        '201':
+          description: Custom field created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CustomFieldResponse'
+
+  /customers/fields/{fieldId}:
+    parameters:
+      - in: path
+        name: fieldId
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Custom Fields
+      summary: Get custom field by ID
+      responses:
+        '200':
+          description: Custom field details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CustomFieldResponse'
+        '404':
+          description: Custom field not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Custom Fields
+      summary: Update custom field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomFieldRequest'
+      responses:
+        '200':
+          description: Custom field updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CustomFieldResponse'
+
+    delete:
+      tags:
+        - Custom Fields
+      summary: Delete custom field
+      responses:
+        '204':
+          description: Custom field deleted successfully
+
+  /customers/fields/batch:
+    patch:
+      tags:
+        - Custom Fields
+      summary: Batch update custom fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fields
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - updates
+                    properties:
+                      id:
+                        type: string
+                      updates:
+                        $ref: '#/components/schemas/CustomFieldRequest'
+      responses:
+        '200':
+          description: Custom fields updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CustomFieldResponse'
+
+  # Media Management Routes
+  /media/upload:
+    post:
+      tags:
+        - Media
+      summary: Upload single media file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/MediaUploadResponse'
+        '400':
+          description: Invalid file or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media/bulk-upload:
+    post:
+      tags:
+        - Media
+      summary: Upload multiple media files
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Files uploaded successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          successful:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/MediaUploadResponse'
+                          failed:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                originalName:
+                                  type: string
+                                error:
+                                  type: string
+
+  /media/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Media
+      summary: Get media by ID
+      responses:
+        '200':
+          description: Media details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/MediaResponse'
+        '404':
+          description: Media not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Media
+      summary: Delete media
+      responses:
+        '204':
+          description: Media deleted successfully
+
+  /media:
+    get:
+      tags:
+        - Media
+      summary: List media files
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [image, video, audio, document]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, uploading, uploaded, failed, deleted]
+      responses:
+        '200':
+          description: List of media files
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          media:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/MediaResponse'
+                          total:
+                            type: integer
+                          pages:
+                            type: integer
+
+  # Customer Group Routes
+  /customers/groups:
+    get:
+      tags:
+        - Customer Groups
+      summary: List customer groups
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: search
           schema:
             type: string
       responses:
-        "200":
-          description: Groups retrieved successfully
+        '200':
+          description: List of customer groups
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  groups:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/CustomerGroup"
-                  total:
-                    type: integer
-                  pages:
-                    type: integer
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          groups:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/CustomerGroupResponse'
+                          total:
+                            type: integer
+                          pages:
+                            type: integer
 
-  /health:
+    post:
+      tags:
+        - Customer Groups
+      summary: Create customer group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerGroupRequest'
+      responses:
+        '201':
+          description: Customer group created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/CustomerGroupResponse'
+
+  # Customer Batch Operations
+  /customers/batch:
+    patch:
+      tags:
+        - Customers
+      summary: Batch update customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - updates
+              properties:
+                updates:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - data
+                    properties:
+                      id:
+                        type: string
+                      data:
+                        $ref: '#/components/schemas/CustomerRequest'
+      responses:
+        '200':
+          description: Customers updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          ok:
+                            type: integer
+                          modifiedCount:
+                            type: integer
+                          matchedCount:
+                            type: integer
+                          upsertedCount:
+                            type: integer
+                          hasWriteErrors:
+                            type: boolean
+
+  # Customer Statistics
+  /customers/statistics:
     get:
       tags:
-        - System
-      summary: Get system health status
+        - Customers
+      summary: Get customer statistics
+      parameters:
+        - in: query
+          name: fromDate
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: toDate
+          schema:
+            type: string
+            format: date-time
       responses:
-        "200":
-          description: System health information
+        '200':
+          description: Customer statistics
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthCheckResponse"
-
-security:
-  - bearerAuth: []
+                allOf:
+                  - $ref: '#/components/schemas/Success'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          statusDistribution:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                _id:
+                                  type: string
+                                count:
+                                  type: integer
+                          groupDistribution:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                _id:
+                                  type: string
+                                name:
+                                  type: string
+                                count:
+                                  type: integer
+                          timeline:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                _id:
+                                  type: object
+                                  properties:
+                                    year:
+                                      type: integer
+                                    month:
+                                      type: integer
+                                    day:
+                                      type: integer
+                                count:
+                                  type: integer
+                          total:
+                            type: integer
