@@ -1,6 +1,6 @@
 // src/routes/call.routes.ts
 
-import type { Router as ExpressRouter, Response, NextFunction, RequestHandler } from 'express';
+import type { Router as ExpressRouter, Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
 import crypto from 'crypto';
 import { callsController } from '@/controllers/calls.controller.js';
@@ -10,7 +10,14 @@ import { validateRequest } from '@/middleware/validate-request.js';
 import { callSchemas } from '@/schemas/call.schema.js';
 import { env } from '@/config/env.js';
 import { AppError, ErrorCode } from '@/utils/error-service.js';
-import type { WebhookRequest } from '@/types/call.js';
+import type {
+  WebhookRequest,
+  InitiateCallRequest,
+  CustomerCallHistoryRequest,
+  StaffCallHistoryRequest,
+  CallByIdRequest,
+  CallStatsRequest,
+} from '@/types/call.js';
 
 const router: ExpressRouter = Router({
   strict: true,
@@ -18,18 +25,28 @@ const router: ExpressRouter = Router({
 });
 
 const RATE_LIMITS = {
-  INITIATE_CALL: { max: 10, window: 15 * 60 },
-  GET_HISTORY: { max: 100, window: 15 * 60 },
-  GET_STATS: { max: 50, window: 15 * 60 },
+  INITIATE_CALL: { max: 10, window: 15 * 60 }, // 10 calls per 15 minutes
+  GET_HISTORY: { max: 100, window: 15 * 60 }, // 100 requests per 15 minutes
+  GET_STATS: { max: 50, window: 15 * 60 }, // 50 requests per 15 minutes
 } as const;
 
-// Type-safe middleware wrapper
-const asHandler = (handler: RequestHandler): RequestHandler => handler;
+/**
+ * Type-safe controller wrapper
+ */
+function controllerHandler<T extends Request>(handler: (req: T, res: Response) => Promise<void>) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await handler(req as T, res);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
 
 /**
  * Verify Exotel webhook signature
  */
-const verifyExotelWebhook: RequestHandler = (req, _res, next): void => {
+function verifyExotelWebhook(req: Request, _res: Response, next: NextFunction): void {
   const webhookReq = req as WebhookRequest;
   const signature = webhookReq.headers['x-exotel-signature'];
   const timestamp = webhookReq.headers['x-exotel-timestamp'];
@@ -50,64 +67,64 @@ const verifyExotelWebhook: RequestHandler = (req, _res, next): void => {
   }
 
   next();
-};
+}
 
 // Routes with type-safe handlers
 router.post(
   '/initiate',
-  asHandler(auth),
-  asHandler(checkPermission(['calls:create'])),
-  asHandler(rateLimit(RATE_LIMITS.INITIATE_CALL.max, RATE_LIMITS.INITIATE_CALL.window)),
-  asHandler(validateRequest(callSchemas.initiateCall)),
-  asHandler(auditMiddleware('call.initiate', 'data')),
-  asHandler(callsController.initiateCall as RequestHandler),
+  auth,
+  checkPermission(['calls:create']),
+  rateLimit(RATE_LIMITS.INITIATE_CALL.max, RATE_LIMITS.INITIATE_CALL.window),
+  validateRequest(callSchemas.initiateCall),
+  auditMiddleware('call.initiate', 'data'),
+  controllerHandler<InitiateCallRequest>(callsController.initiateCall),
 );
 
 router.post(
   '/callback',
   verifyExotelWebhook,
-  asHandler(validateRequest(callSchemas.callback)),
-  asHandler(auditMiddleware('call.callback', 'data')),
-  asHandler(callsController.handleCallback as RequestHandler),
+  validateRequest(callSchemas.callback),
+  auditMiddleware('call.callback', 'data'),
+  controllerHandler<WebhookRequest>(callsController.handleCallback),
 );
 
 router.get(
   '/customer/:customerId',
-  asHandler(auth),
-  asHandler(checkPermission(['calls:read'])),
-  asHandler(rateLimit(RATE_LIMITS.GET_HISTORY.max, RATE_LIMITS.GET_HISTORY.window)),
-  asHandler(validateRequest(callSchemas.getCustomerHistory)),
-  asHandler(auditMiddleware('call.history.customer', 'data')),
-  asHandler(callsController.getCustomerCallHistory as RequestHandler),
+  auth,
+  checkPermission(['calls:read']),
+  rateLimit(RATE_LIMITS.GET_HISTORY.max, RATE_LIMITS.GET_HISTORY.window),
+  validateRequest(callSchemas.getCustomerHistory),
+  auditMiddleware('call.history.customer', 'data'),
+  controllerHandler<CustomerCallHistoryRequest>(callsController.getCustomerCallHistory),
 );
 
 router.get(
   '/staff',
-  asHandler(auth),
-  asHandler(checkPermission(['calls:read'])),
-  asHandler(rateLimit(RATE_LIMITS.GET_HISTORY.max, RATE_LIMITS.GET_HISTORY.window)),
-  asHandler(validateRequest(callSchemas.getStaffHistory)),
-  asHandler(auditMiddleware('call.history.staff', 'data')),
-  asHandler(callsController.getStaffCallHistory as RequestHandler),
+  auth,
+  checkPermission(['calls:read']),
+  rateLimit(RATE_LIMITS.GET_HISTORY.max, RATE_LIMITS.GET_HISTORY.window),
+  validateRequest(callSchemas.getStaffHistory),
+  auditMiddleware('call.history.staff', 'data'),
+  controllerHandler<StaffCallHistoryRequest>(callsController.getStaffCallHistory),
 );
 
 router.get(
   '/:id',
-  asHandler(auth),
-  asHandler(checkPermission(['calls:read'])),
-  asHandler(validateRequest(callSchemas.getCallById)),
-  asHandler(auditMiddleware('call.details', 'data')),
-  asHandler(callsController.getCallById as RequestHandler),
+  auth,
+  checkPermission(['calls:read']),
+  validateRequest(callSchemas.getCallById),
+  auditMiddleware('call.details', 'data'),
+  controllerHandler<CallByIdRequest>(callsController.getCallById),
 );
 
 router.get(
   '/statistics',
-  asHandler(auth),
-  asHandler(checkPermission(['calls:read'])),
-  asHandler(rateLimit(RATE_LIMITS.GET_STATS.max, RATE_LIMITS.GET_STATS.window)),
-  asHandler(validateRequest(callSchemas.getStatistics)),
-  asHandler(auditMiddleware('call.statistics', 'data')),
-  asHandler(callsController.getCallStatistics as RequestHandler),
+  auth,
+  checkPermission(['calls:read']),
+  rateLimit(RATE_LIMITS.GET_STATS.max, RATE_LIMITS.GET_STATS.window),
+  validateRequest(callSchemas.getStatistics),
+  auditMiddleware('call.statistics', 'data'),
+  controllerHandler<CallStatsRequest>(callsController.getCallStatistics),
 );
 
 export default router;

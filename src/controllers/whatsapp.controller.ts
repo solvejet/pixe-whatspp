@@ -1,12 +1,16 @@
 // src/controllers/whatsapp.controller.ts
 
 import type { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import { whatsappService } from '@/services/whatsapp.service.js';
+import { customerService } from '@/services/customer.service.js';
 import { logger } from '@/utils/logger.js';
 import { AppError, ErrorCode } from '@/utils/error-service.js';
 import { env } from '@/config/env.js';
 import { successResponse } from '@/middleware/error-handler.js';
 import type { AuthenticatedRequest } from '@/types/auth.js';
+import type { MessageType } from '@/types/whatsapp.js';
+import { Role } from '@/types/auth.js';
 
 export class WhatsAppController {
   /**
@@ -43,14 +47,36 @@ export class WhatsAppController {
   };
 
   /**
-   * Send a message to a WhatsApp user
+   * Send a message
    * @route POST /api/whatsapp/messages
    */
   public sendMessage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { to, type, content, variables } = req.body;
 
-    await whatsappService.sendMessage(to, type, content, variables);
+    await whatsappService.sendMessage(to, type as MessageType, content, variables);
     successResponse(res, { success: true }, 'Message sent successfully');
+  };
+
+  /**
+   * Send a template message
+   * @route POST /api/whatsapp/messages/template
+   */
+  public sendTemplate = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { to, templateName, language, variables } = req.body;
+
+    await whatsappService.sendTemplate(to, templateName, language, variables);
+    successResponse(res, { success: true }, 'Template message sent successfully');
+  };
+
+  /**
+   * Send bulk messages
+   * @route POST /api/whatsapp/messages/bulk
+   */
+  public sendBulkMessages = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { messages } = req.body;
+
+    await whatsappService.sendBulkMessages(messages);
+    successResponse(res, { success: true }, 'Bulk messages sent successfully');
   };
 
   /**
@@ -62,9 +88,14 @@ export class WhatsAppController {
     res: Response,
   ): Promise<void> => {
     const { id } = req.params;
-    const { page = '1', limit = '50' } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
 
-    const messages = await this.getMessageHistory(id, Number(page), Number(limit));
+    if (!Types.ObjectId.isValid(id)) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid conversation ID format', 400);
+    }
+
+    const messages = await whatsappService.getConversationHistory(id, page, limit);
     successResponse(res, messages);
   };
 
@@ -76,83 +107,57 @@ export class WhatsAppController {
     req: AuthenticatedRequest,
     res: Response,
   ): Promise<void> => {
-    const { page = '1', limit = '20' } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
     const userId = req.user?.userId;
 
     if (!userId) {
       throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
     }
 
-    const conversations = await this.getConversations(userId, Number(page), Number(limit));
+    const conversations = await whatsappService.getActiveConversations(page, limit);
     successResponse(res, conversations);
   };
 
   /**
-   * Mark conversation as closed
-   * @route POST /api/whatsapp/conversations/:id/close
+   * Mark messages as read
+   * @route POST /api/whatsapp/conversations/:id/read
    */
-  public closeConversation = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  public markMessagesAsRead = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const { id } = req.params;
+    const { messageIds } = req.body;
+
+    if (!Types.ObjectId.isValid(id)) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid conversation ID format', 400);
+    }
+
+    await whatsappService.markMessagesAsRead(id, messageIds);
+    successResponse(res, { success: true }, 'Messages marked as read');
+  };
+
+  /**
+   * Get assigned customers for the authenticated user
+   * @route GET /api/whatsapp/customers/assigned
+   */
+  public getAssignedCustomers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const userId = req.user?.userId;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
 
     if (!userId) {
       throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
     }
 
-    await this.markConversationClosed(id, userId);
-    successResponse(res, { success: true }, 'Conversation closed successfully');
+    const query: Record<string, unknown> = {};
+
+    // If user is not admin, only show assigned customers
+    if (!req.user?.roles.includes(Role.ADMIN)) {
+      query.assignedAdmin = new Types.ObjectId(userId);
+    }
+
+    const customers = await customerService.listCustomers(page, limit, query);
+    successResponse(res, customers);
   };
-
-  /**
-   * Get message history
-   */
-  private async getMessageHistory(
-    conversationId: string,
-    page: number,
-    limit: number,
-  ): Promise<{
-    messages: unknown[];
-    total: number;
-    page: number;
-    pages: number;
-  }> {
-    // Implement pagination and message fetching logic
-    return {
-      messages: [],
-      total: 0,
-      page,
-      pages: 0,
-    };
-  }
-
-  /**
-   * Get conversations
-   */
-  private async getConversations(
-    userId: string,
-    page: number,
-    limit: number,
-  ): Promise<{
-    conversations: unknown[];
-    total: number;
-    page: number;
-    pages: number;
-  }> {
-    // Implement conversation fetching logic
-    return {
-      conversations: [],
-      total: 0,
-      page,
-      pages: 0,
-    };
-  }
-
-  /**
-   * Mark conversation as closed
-   */
-  private async markConversationClosed(conversationId: string, userId: string): Promise<void> {
-    // Implement conversation closing logic
-  }
 }
 
 export const whatsappController = new WhatsAppController();

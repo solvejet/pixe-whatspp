@@ -57,7 +57,7 @@ class App {
     const origins = env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim());
     this.app.use(
       cors({
-        origin: env.NODE_ENV === 'production' ? origins : '*',
+        origin: env.NODE_ENV === 'production' ? origins : 'http://localhost:5173',
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,

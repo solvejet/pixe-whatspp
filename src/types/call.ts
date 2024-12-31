@@ -1,14 +1,71 @@
 // src/types/call.ts
 
-import type { Request } from 'express';
+import type { Request, ParamsDictionary } from 'express';
 import type { AuthenticatedRequest } from './auth.js';
 import type { CallStatus } from '@/models/call.model.js';
 import type { ParsedQs } from 'qs';
 
 // Base interface for call requests
-export interface CallRequestBase extends AuthenticatedRequest {
-  user: NonNullable<AuthenticatedRequest['user']>; // Ensure user is not undefined
+export interface CallRequestBase {
+  user: NonNullable<AuthenticatedRequest['user']>;
 }
+
+// Query parameters interface
+export interface CallQueryParams {
+  page?: string;
+  limit?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: CallStatus;
+}
+
+// Request type definitions with proper Express Request extension
+export type InitiateCallRequest = Request
+  Record<string, never>,
+  unknown,
+  InitiateCallBody,
+  Record<string, never>
+> & {
+  user: NonNullable<AuthenticatedRequest['user']>;
+};
+
+export type WebhookRequest = Request
+  Record<string, never>,
+  unknown,
+  CallbackBody,
+  Record<string, never>
+>;
+
+export interface CustomerCallHistoryRequest extends Request
+  { customerId: string },
+  any,
+  any,
+  CallQueryParams
+>, CallRequestBase {}
+
+export interface StaffCallHistoryRequest extends Request
+  ParamsDictionary,
+  any,
+  any,
+  CallQueryParams
+>, CallRequestBase {}
+
+export interface CallByIdRequest extends Request
+  { id: string },
+  any,
+  any,
+  ParsedQs
+>, CallRequestBase {}
+
+export interface CallStatsRequest extends Request
+  ParamsDictionary,
+  any,
+  any,
+  {
+    startDate?: string;
+    endDate?: string;
+  }
+>, CallRequestBase {}
 
 // Request body interfaces
 export interface InitiateCallBody {
@@ -42,36 +99,7 @@ export interface CallQueryParams extends ParsedQs {
   status?: CallStatus;
 }
 
-// Request type definitions
-export interface InitiateCallRequest extends CallRequestBase {
-  body: InitiateCallBody;
-}
-
-export interface WebhookRequest extends Request {
-  body: CallbackBody;
-}
-
-export interface CustomerCallHistoryRequest extends CallRequestBase {
-  params: { customerId: string };
-  query: CallQueryParams;
-}
-
-export interface StaffCallHistoryRequest extends CallRequestBase {
-  query: CallQueryParams;
-}
-
-export interface CallByIdRequest extends CallRequestBase {
-  params: { id: string };
-}
-
-export interface CallStatsRequest extends CallRequestBase {
-  query: {
-    startDate?: string;
-    endDate?: string;
-  };
-}
-
-// Response types
+// Response types remain the same
 export interface CallResponse {
   id: string;
   customerId: string;

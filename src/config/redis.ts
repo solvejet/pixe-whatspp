@@ -13,6 +13,7 @@ import type { SessionData } from '@/types/redis.js';
 
 type RedisClient = RedisClientType<RedisDefaultModules, RedisFunctions, RedisScripts>;
 type RedisValue = string | number | Buffer;
+type RedisCommandFunction = (...args: unknown[]) => unknown;
 
 class RedisService {
   private client: RedisClient;
@@ -42,6 +43,79 @@ class RedisService {
         },
       },
     });
+  }
+
+  public async multi(): Promise<ReturnType<RedisClient['multi']>> {
+    try {
+      return this.client.multi();
+    } catch (error) {
+      logger.error('Redis multi error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Execute multiple Redis commands atomically
+   */
+  public async executeMulti(commands: Array<[string, ...unknown[]]>): Promise<unknown[]> {
+    try {
+      const multi = this.client.multi();
+
+      // Validate and execute commands
+      commands.forEach(([command, ...args]) => {
+        const cmd = command as keyof typeof multi;
+        const redisCommand = multi[cmd] as RedisCommandFunction;
+
+        if (typeof redisCommand === 'function') {
+          redisCommand.apply(multi, args);
+        } else {
+          throw new Error(`Invalid Redis command: ${command}`);
+        }
+      });
+
+      const results = await multi.exec();
+      if (!results) {
+        throw new Error('Multi command execution failed');
+      }
+
+      return results;
+    } catch (error) {
+      logger.error('Redis executeMulti error:', {
+        error,
+        commands: commands.map(([cmd]) => cmd),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Execute Redis pipeline
+   */
+  public async pipeline(commands: Array<[string, ...unknown[]]>): Promise<unknown[]> {
+    try {
+      const pipeline = this.client.multi();
+
+      // Validate and execute commands
+      commands.forEach(([command, ...args]) => {
+        const cmd = command as keyof typeof pipeline;
+        const redisCommand = pipeline[cmd] as RedisCommandFunction;
+
+        if (typeof redisCommand === 'function') {
+          redisCommand.apply(pipeline, args);
+        } else {
+          throw new Error(`Invalid Redis command: ${command}`);
+        }
+      });
+
+      const results = await pipeline.exec();
+      return results ?? [];
+    } catch (error) {
+      logger.error('Redis pipeline error:', {
+        error,
+        commands: commands.map(([cmd]) => cmd),
+      });
+      throw error;
+    }
   }
 
   public async hIncrBy(key: string, field: string, increment: number): Promise<number> {

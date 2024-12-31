@@ -2,7 +2,6 @@
 
 import { Types } from 'mongoose';
 import { env } from '@/config/env.js';
-import type { RedisClientType, RedisDefaultModules, RedisFunctions, RedisScripts } from 'redis';
 import { RabbitMQ } from '@/config/rabbit-mq.js';
 import { logger } from '@/utils/logger.js';
 import { AppError, ErrorCode } from '@/utils/error-service.js';
@@ -87,8 +86,6 @@ interface StoredMessage {
   metadata?: Record<string, unknown>;
 }
 
-type RedisClient = RedisClientType<RedisDefaultModules, RedisFunctions, RedisScripts>;
-
 export class WhatsAppService {
   private static instance: WhatsAppService;
 
@@ -112,13 +109,11 @@ export class WhatsAppService {
 
   // Service state
   private socketServer: SocketServer | null = null;
-  private readonly redisClient: RedisClient;
   private channel: Channel | null = null;
   private isProcessing = false;
   private readonly rateLimiter = new Map<string, { count: number; resetTime: number }>();
 
   private constructor() {
-    this.redisClient = Redis.client;
     void this.initialize();
   }
 
@@ -1084,23 +1079,31 @@ export class WhatsAppService {
 
   private async updateFailureMetrics(message: FailedMessageRecord): Promise<void> {
     try {
-      const pipeline = this.redisClient.multi();
       const baseKey = 'metrics:failures';
-
-      // Increment total failures
-      await this.redisClient.hIncrBy(`${baseKey}:total`, message.error.code, 1);
-
-      // Track hourly failures
       const hourKey = `${baseKey}:hourly:${new Date().toISOString().slice(0, 13)}`;
-      await this.redisClient.hIncrBy(hourKey, message.error.code, 1);
-      await this.redisClient.expire(hourKey, 7 * 24 * 60 * 60); // Keep hourly data for 7 days
 
-      // Track by recipient
-      await this.redisClient.hIncrBy(`${baseKey}:recipients:${message.to}`, 'total', 1);
+      // Use type-safe command array
+      const commands: Array<[string, ...unknown[]]> = [
+        ['hincrby', `${baseKey}:total`, message.error.code, 1],
+        ['hincrby', hourKey, message.error.code, 1],
+        ['expire', hourKey, 7 * 24 * 60 * 60], // 7 days retention
+        ['hincrby', `${baseKey}:recipients:${message.to}`, 'total', 1],
+      ];
 
-      await pipeline.exec();
+      await Redis.executeMulti(commands);
+
+      // Update error tracking separately
+      const errorKey = `${baseKey}:errors:${message.error.code}`;
+      await Redis.hSet(errorKey, {
+        lastOccurred: new Date().toISOString(),
+        count: (await Redis.hIncrBy(errorKey, 'count', 1)).toString(),
+      });
     } catch (error) {
-      logger.error('Error updating failure metrics:', error);
+      logger.error('Error updating failure metrics:', {
+        error,
+        messageId: message.messageId,
+        errorCode: message.error.code,
+      });
     }
   }
 
