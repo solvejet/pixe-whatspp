@@ -1,7 +1,7 @@
-// src/routes/call.routes.ts
+// src/routes/calls.routes.ts
 
-import type { Router as ExpressRouter, Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { callsController } from '@/controllers/calls.controller.js';
 import { auth, checkPermission, rateLimit } from '@/middleware/auth.middleware.js';
@@ -10,20 +10,23 @@ import { validateRequest } from '@/middleware/validate-request.js';
 import { callSchemas } from '@/schemas/call.schema.js';
 import { env } from '@/config/env.js';
 import { AppError, ErrorCode } from '@/utils/error-service.js';
-import type {
-  WebhookRequest,
-  InitiateCallRequest,
-  CustomerCallHistoryRequest,
-  StaffCallHistoryRequest,
-  CallByIdRequest,
-  CallStatsRequest,
+import {
+  type InitiateCallRequest,
+  type CustomerCallHistoryRequest,
+  type StaffCallHistoryRequest,
+  type CallByIdRequest,
+  type CallStatsRequest,
+  isWebhookRequest,
+  type WebhookRequest,
+  isWebhookTimestampValid,
 } from '@/types/call.js';
 
-const router: ExpressRouter = Router({
+const router = Router({
   strict: true,
   caseSensitive: true,
 });
 
+// Rate limiting configurations
 const RATE_LIMITS = {
   INITIATE_CALL: { max: 10, window: 15 * 60 }, // 10 calls per 15 minutes
   GET_HISTORY: { max: 100, window: 15 * 60 }, // 100 requests per 15 minutes
@@ -33,10 +36,12 @@ const RATE_LIMITS = {
 /**
  * Type-safe controller wrapper
  */
-function controllerHandler<T extends Request>(handler: (req: T, res: Response) => Promise<void>) {
+function controllerHandler<T extends Request>(
+  fn: (req: T, res: Response) => Promise<void>,
+): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await handler(req as T, res);
+      await fn(req as T, res);
     } catch (error) {
       next(error);
     }
@@ -46,30 +51,59 @@ function controllerHandler<T extends Request>(handler: (req: T, res: Response) =
 /**
  * Verify Exotel webhook signature
  */
-function verifyExotelWebhook(req: Request, _res: Response, next: NextFunction): void {
-  const webhookReq = req as WebhookRequest;
-  const signature = webhookReq.headers['x-exotel-signature'];
-  const timestamp = webhookReq.headers['x-exotel-timestamp'];
+const verifyExotelWebhook = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!isWebhookRequest(req)) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid webhook request format', 401, true, {
+        details: {
+          headers: req.headers,
+        },
+      });
+    }
 
-  if (!signature || !timestamp || Array.isArray(signature) || Array.isArray(timestamp)) {
-    throw new AppError(ErrorCode.UNAUTHORIZED, 'Missing webhook signature headers', 401);
+    // Validate timestamp
+    const timestamp = req.headers['x-exotel-timestamp'];
+    if (!isWebhookTimestampValid(timestamp)) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'Webhook timestamp expired', 401, true, {
+        details: {
+          timestamp,
+          maxAge: '5 minutes',
+        },
+      });
+    }
+
+    // Verify signature
+    const signature = req.headers['x-exotel-signature'];
+    const rawBody = JSON.stringify(req.body);
+    const verificationString = `${timestamp}.${rawBody}`;
+    const hmac = crypto.createHmac('sha256', env.EXOTEL_API_TOKEN);
+    hmac.update(verificationString);
+    const calculatedSignature = hmac.digest('hex');
+
+    if (calculatedSignature !== signature) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid webhook signature', 401, true, {
+        details: {
+          expected: calculatedSignature,
+          received: signature,
+        },
+      });
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
+};
 
-  const rawBody = JSON.stringify(webhookReq.body);
-  const verificationString = `${timestamp}.${rawBody}`;
+/**
+ * Route Handlers
+ */
 
-  const hmac = crypto.createHmac('sha256', env.EXOTEL_API_TOKEN);
-  hmac.update(verificationString);
-  const calculatedSignature = hmac.digest('hex');
-
-  if (calculatedSignature !== signature) {
-    throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid webhook signature', 401);
-  }
-
-  next();
-}
-
-// Routes with type-safe handlers
+// Initiate a call
 router.post(
   '/initiate',
   auth,
@@ -80,6 +114,7 @@ router.post(
   controllerHandler<InitiateCallRequest>(callsController.initiateCall),
 );
 
+// Handle Exotel webhook callback
 router.post(
   '/callback',
   verifyExotelWebhook,
@@ -88,6 +123,7 @@ router.post(
   controllerHandler<WebhookRequest>(callsController.handleCallback),
 );
 
+// Get customer call history
 router.get(
   '/customer/:customerId',
   auth,
@@ -98,6 +134,7 @@ router.get(
   controllerHandler<CustomerCallHistoryRequest>(callsController.getCustomerCallHistory),
 );
 
+// Get staff call history
 router.get(
   '/staff',
   auth,
@@ -108,6 +145,7 @@ router.get(
   controllerHandler<StaffCallHistoryRequest>(callsController.getStaffCallHistory),
 );
 
+// Get call by ID
 router.get(
   '/:id',
   auth,
@@ -117,6 +155,7 @@ router.get(
   controllerHandler<CallByIdRequest>(callsController.getCallById),
 );
 
+// Get call statistics
 router.get(
   '/statistics',
   auth,

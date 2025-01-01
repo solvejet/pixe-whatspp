@@ -1,16 +1,24 @@
 // src/controllers/whatsapp.controller.ts
 
-import type { Request, Response } from 'express';
 import { Types } from 'mongoose';
+import type { Request, Response } from 'express';
 import { whatsappService } from '@/services/whatsapp.service.js';
 import { customerService } from '@/services/customer.service.js';
 import { logger } from '@/utils/logger.js';
 import { AppError, ErrorCode } from '@/utils/error-service.js';
 import { env } from '@/config/env.js';
 import { successResponse } from '@/middleware/error-handler.js';
-import type { AuthenticatedRequest } from '@/types/auth.js';
-import type { MessageType } from '@/types/whatsapp.js';
 import { Role } from '@/types/auth.js';
+import type {
+  WebhookPayload,
+  SendMessageRequest,
+  SendTemplateRequest,
+  SendBulkMessagesRequest,
+  GetConversationRequest,
+  MarkMessagesReadRequest,
+  ListConversationsRequest,
+  GetAssignedCustomersRequest,
+} from '@/types/whatsapp.js';
 
 export class WhatsAppController {
   /**
@@ -35,7 +43,10 @@ export class WhatsAppController {
    * Handle incoming webhook events from WhatsApp
    * @route POST /api/whatsapp/webhook
    */
-  public handleWebhook = async (req: Request, res: Response): Promise<void> => {
+  public handleWebhook = async (
+    req: Request<unknown, unknown, WebhookPayload>,
+    res: Response,
+  ): Promise<void> => {
     try {
       await whatsappService.handleWebhook(req.body);
       res.status(200).send('OK');
@@ -50,10 +61,9 @@ export class WhatsAppController {
    * Send a message
    * @route POST /api/whatsapp/messages
    */
-  public sendMessage = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  public sendMessage = async (req: SendMessageRequest, res: Response): Promise<void> => {
     const { to, type, content, variables } = req.body;
-
-    await whatsappService.sendMessage(to, type as MessageType, content, variables);
+    await whatsappService.sendMessage(to, type, content, variables);
     successResponse(res, { success: true }, 'Message sent successfully');
   };
 
@@ -61,9 +71,8 @@ export class WhatsAppController {
    * Send a template message
    * @route POST /api/whatsapp/messages/template
    */
-  public sendTemplate = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  public sendTemplate = async (req: SendTemplateRequest, res: Response): Promise<void> => {
     const { to, templateName, language, variables } = req.body;
-
     await whatsappService.sendTemplate(to, templateName, language, variables);
     successResponse(res, { success: true }, 'Template message sent successfully');
   };
@@ -72,9 +81,8 @@ export class WhatsAppController {
    * Send bulk messages
    * @route POST /api/whatsapp/messages/bulk
    */
-  public sendBulkMessages = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  public sendBulkMessages = async (req: SendBulkMessagesRequest, res: Response): Promise<void> => {
     const { messages } = req.body;
-
     await whatsappService.sendBulkMessages(messages);
     successResponse(res, { success: true }, 'Bulk messages sent successfully');
   };
@@ -84,12 +92,12 @@ export class WhatsAppController {
    * @route GET /api/whatsapp/conversations/:id/messages
    */
   public getConversationHistory = async (
-    req: AuthenticatedRequest,
+    req: GetConversationRequest,
     res: Response,
   ): Promise<void> => {
     const { id } = req.params;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const page = parseInt(req.query.page ?? '1', 10);
+    const limit = parseInt(req.query.limit ?? '50', 10);
 
     if (!Types.ObjectId.isValid(id)) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid conversation ID format', 400);
@@ -104,14 +112,13 @@ export class WhatsAppController {
    * @route GET /api/whatsapp/conversations
    */
   public getActiveConversations = async (
-    req: AuthenticatedRequest,
+    req: ListConversationsRequest,
     res: Response,
   ): Promise<void> => {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const userId = req.user?.userId;
+    const page = parseInt(req.query.page ?? '1', 10);
+    const limit = parseInt(req.query.limit ?? '20', 10);
 
-    if (!userId) {
+    if (!req.user?.userId) {
       throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
     }
 
@@ -123,7 +130,10 @@ export class WhatsAppController {
    * Mark messages as read
    * @route POST /api/whatsapp/conversations/:id/read
    */
-  public markMessagesAsRead = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  public markMessagesAsRead = async (
+    req: MarkMessagesReadRequest,
+    res: Response,
+  ): Promise<void> => {
     const { id } = req.params;
     const { messageIds } = req.body;
 
@@ -139,23 +149,28 @@ export class WhatsAppController {
    * Get assigned customers for the authenticated user
    * @route GET /api/whatsapp/customers/assigned
    */
-  public getAssignedCustomers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const userId = req.user?.userId;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-
-    if (!userId) {
+  public getAssignedCustomers = async (
+    req: GetAssignedCustomersRequest,
+    res: Response,
+  ): Promise<void> => {
+    if (!req.user?.userId) {
       throw new AppError(ErrorCode.UNAUTHORIZED, 'User not authenticated', 401);
     }
 
-    const query: Record<string, unknown> = {};
+    const page = parseInt(req.query.page ?? '1', 10);
+    const limit = parseInt(req.query.limit ?? '20', 10);
 
-    // If user is not admin, only show assigned customers
-    if (!req.user?.roles.includes(Role.ADMIN)) {
-      query.assignedAdmin = new Types.ObjectId(userId);
+    const customers = await customerService.listCustomers(page, limit);
+
+    if (!req.user.roles.includes(Role.ADMIN)) {
+      // Filter for assigned customers if not admin
+      const filteredCustomers = customers.customers.filter(
+        (customer) => customer.assignedAdmin.id === req.user?.userId,
+      );
+      customers.customers = filteredCustomers;
+      customers.total = filteredCustomers.length;
     }
 
-    const customers = await customerService.listCustomers(page, limit, query);
     successResponse(res, customers);
   };
 }

@@ -1,7 +1,27 @@
 // src/types/whatsapp.ts
 
 import type { Types } from 'mongoose';
+import type { AuthenticatedRequest } from './auth.js';
+import type {
+  WhatsAppWebhookPayload,
+  WhatsAppWebhookEntry,
+  WhatsAppWebhookMessage,
+  WhatsAppWebhookStatus,
+  WhatsAppWebhookProfile,
+} from './whatsapp-webhook.js';
 
+// Re-export webhook types for convenience
+export type {
+  WhatsAppWebhookPayload as WebhookPayload,
+  WhatsAppWebhookEntry as WebhookEntry,
+  WhatsAppWebhookMessage as WebhookMessage,
+  WhatsAppWebhookStatus as WebhookStatus,
+  WhatsAppWebhookProfile as WebhookProfile,
+};
+
+/**
+ * Enum Types
+ */
 export enum MessageType {
   TEXT = 'text',
   IMAGE = 'image',
@@ -41,6 +61,9 @@ export enum InteractiveType {
   ADDRESS_MESSAGE = 'address_message',
 }
 
+/**
+ * Message Component Types
+ */
 export interface WhatsAppMetadata {
   displayPhoneNumber: string;
   phoneNumberId: string;
@@ -61,14 +84,6 @@ export interface MessageError {
     details: string;
   };
   href?: string;
-}
-
-export interface WhatsAppPayload {
-  messaging_product: 'whatsapp';
-  metadata: WhatsAppMetadata;
-  contacts?: Contact[];
-  messages?: WhatsAppMessage[];
-  statuses?: MessageStatusUpdate[];
 }
 
 export interface Location {
@@ -124,6 +139,9 @@ export interface InteractiveMessage {
   };
 }
 
+/**
+ * Core Message Types
+ */
 export interface WhatsAppMessage {
   id: string;
   from: string;
@@ -161,6 +179,10 @@ export interface WhatsAppMessage {
     ctwa_clid?: string;
   };
 }
+
+/**
+ * Status Update Types
+ */
 export interface MessageStatusUpdate {
   id: string;
   status: MessageStatus;
@@ -181,7 +203,9 @@ export interface MessageStatusUpdate {
   errors?: MessageError[];
 }
 
-// Database Models
+/**
+ * Database Model Types
+ */
 export interface IConversation {
   customerId: Types.ObjectId;
   businessId: Types.ObjectId;
@@ -229,7 +253,9 @@ export interface ITemplate {
   metadata: Map<string, unknown>;
 }
 
-// Variable Processing Types
+/**
+ * Variable Processing Types
+ */
 export interface VariableMap {
   [key: string]: {
     value: unknown;
@@ -245,4 +271,147 @@ export interface ProcessedTemplate {
     variable: string;
     error: string;
   }>;
+}
+
+/**
+ * Request Types
+ */
+export interface SendMessageRequest extends AuthenticatedRequest {
+  body: {
+    to: string;
+    type: MessageType;
+    content: Record<string, unknown>;
+    variables?: VariableMap;
+  };
+}
+
+export interface SendTemplateRequest extends AuthenticatedRequest {
+  body: {
+    to: string;
+    templateName: string;
+    language: string;
+    variables?: VariableMap;
+  };
+}
+
+export interface SendBulkMessagesRequest extends AuthenticatedRequest {
+  body: {
+    messages: Array<{
+      to: string;
+      type: MessageType;
+      content: Record<string, unknown>;
+      variables?: VariableMap;
+    }>;
+  };
+}
+
+export interface GetConversationRequest extends AuthenticatedRequest {
+  params: {
+    id: string;
+  };
+  query: {
+    page?: string;
+    limit?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: MessageStatus;
+  };
+}
+
+export interface MarkMessagesReadRequest extends AuthenticatedRequest {
+  params: {
+    id: string;
+  };
+  body: {
+    messageIds: string[];
+  };
+}
+
+export interface ListConversationsRequest extends AuthenticatedRequest {
+  query: {
+    page?: string;
+    limit?: string;
+    status?: 'active' | 'expired' | 'closed';
+    type?: ConversationType;
+    startDate?: string;
+    endDate?: string;
+  };
+}
+
+export interface GetAssignedCustomersRequest extends AuthenticatedRequest {
+  query: {
+    page?: string;
+    limit?: string;
+    search?: string;
+    status?: string;
+  };
+}
+
+/**
+ * Response Types
+ */
+export interface ConversationResponse {
+  id: string;
+  customerId: string;
+  status: string;
+  type: ConversationType;
+  lastMessageAt: string;
+  expiresAt: string;
+  metadata: Record<string, unknown>;
+  messages: MessageResponse[];
+}
+
+export interface MessageResponse {
+  id: string;
+  messageId: string;
+  from: string;
+  to: string;
+  type: MessageType;
+  status: MessageStatus;
+  timestamp: string;
+  content: {
+    type: MessageType;
+    data: Record<string, unknown>;
+  };
+  metadata: Record<string, unknown>;
+}
+
+export interface TemplateResponse {
+  name: string;
+  language: string;
+  status: string;
+  category: string;
+  components: Array<{
+    type: string;
+    text?: string;
+    format?: string;
+    example?: Record<string, unknown>;
+  }>;
+  variables: Array<{
+    key: string;
+    type: string;
+    source: string;
+    field?: string;
+    value?: string;
+  }>;
+}
+
+/**
+ * Service Configuration Types
+ */
+export interface WhatsAppConfig {
+  phoneNumberId: string;
+  accessToken: string;
+  apiVersion: string;
+  webhookVerifyToken: string;
+  defaultLanguage: string;
+  messageTtl: number;
+  retryAttempts: number;
+  retryDelay: number;
+}
+
+export interface RateLimitConfig {
+  windowMs: number;
+  maxRequests: number;
+  errorMessage: string;
 }

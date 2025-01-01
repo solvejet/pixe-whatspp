@@ -8,14 +8,15 @@ import { CallModel } from '@/models/call.model.js';
 import { successResponse } from '@/middleware/error-handler.js';
 import { AppError, ErrorCode } from '@/utils/error-service.js';
 import { env } from '@/config/env.js';
-import type {
-  InitiateCallRequest,
-  WebhookRequest,
-  CustomerCallHistoryRequest,
-  StaffCallHistoryRequest,
-  CallByIdRequest,
-  CallStatsRequest,
+import {
+  type InitiateCallRequest,
+  type CustomerCallHistoryRequest,
+  type StaffCallHistoryRequest,
+  type CallByIdRequest,
+  type CallStatsRequest,
+  type WebhookRequest,
 } from '@/types/call.js';
+import { logger } from '@/utils/logger.js';
 
 export class CallsController {
   /**
@@ -77,6 +78,8 @@ export class CallsController {
 
   /**
    * Handle callback from Exotel
+   * Processes webhook events from Exotel's API with type safety
+   * Always returns 200 to prevent webhook retries, but logs failures
    * @route POST /api/calls/callback
    */
   public handleCallback = async (req: WebhookRequest, res: Response): Promise<void> => {
@@ -84,13 +87,26 @@ export class CallsController {
       await exotelService.handleCallback(req.body);
       successResponse(res, null, 'Callback processed successfully');
     } catch (error) {
+      // Log the error with detailed context
+      logger.error('Error processing Exotel webhook:', {
+        error,
+        body: req.body,
+        headers: {
+          signature: req.headers['x-exotel-signature'],
+          timestamp: req.headers['x-exotel-timestamp'],
+        },
+      });
+
       // Always return 200 for webhooks even if processing fails
+      // This prevents unnecessary retries from Exotel
       successResponse(
         res,
         { error: 'Webhook processing failed but acknowledged' },
         'Webhook received',
       );
-      throw error; // Let error middleware handle logging
+
+      // Re-throw for error tracking (response already sent)
+      throw error;
     }
   };
 

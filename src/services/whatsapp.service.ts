@@ -235,7 +235,7 @@ export class WhatsAppService {
       await this.updateConversationActivity(conversation._id);
 
       // Process automated responses
-      void this.processAutomatedResponse(message);
+      // void this.processAutomatedResponse(message);
     } catch (error) {
       logger.error('Error processing incoming message:', error);
       throw error;
@@ -1251,10 +1251,10 @@ export class WhatsAppService {
     }
   }
 
-  private async processAutomatedResponse(message: WhatsAppWebhookMessage): Promise<void> {
-    // Implement automation logic
-    // This will be connected to the automation builder
-  }
+  // private async processAutomatedResponse(message: WhatsAppWebhookMessage): Promise<void> {
+  //   // Implement automation logic
+  //   // This will be connected to the automation builder
+  // }
 
   /**
    * Handle failed message with proper error tracking and retry logic
