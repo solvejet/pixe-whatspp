@@ -48,8 +48,8 @@ export class AuthController {
         permissions: result.user.permissions,
       },
       {
-        ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
+        ipAddress: req.ip ?? req.socket.remoteAddress ?? 'unknown',
+        userAgent: req.headers['user-agent'] ?? 'unknown',
         deviceId: deviceInfo.deviceId,
       },
     );
@@ -63,7 +63,7 @@ export class AuthController {
    */
   public login = async (req: LoginRequest, res: Response): Promise<void> => {
     const { email, password } = req.body;
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
 
     const isBlocked = await this.checkLoginBlock(ip);
     if (isBlocked) {
@@ -80,7 +80,7 @@ export class AuthController {
         email,
         password,
         ip,
-        req.headers['user-agent'] || '',
+        req.headers['user-agent'] ?? '',
         deviceInfo,
       );
       await this.resetLoginAttempts(ip);
@@ -109,8 +109,8 @@ export class AuthController {
         permissions: result.user.permissions,
       },
       {
-        ipAddress: req.ip || req.socket.remoteAddress || 'unknown',
-        userAgent: req.headers['user-agent'] || 'unknown',
+        ipAddress: req.ip ?? req.socket.remoteAddress ?? 'unknown',
+        userAgent: req.headers['user-agent'] ?? 'unknown',
         deviceId: deviceInfo.deviceId,
       },
     );
@@ -140,23 +140,23 @@ export class AuthController {
   private extractDeviceInfo(
     req: AuthenticatedRequest & { body: { deviceInfo?: Partial<DeviceInfo> } },
   ): DeviceInfo {
-    const userAgent = req.headers['user-agent'] || 'unknown';
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] ?? 'unknown';
+    const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
 
     this.uaParser.setUA(userAgent);
     const result = this.uaParser.getResult();
 
     const deviceId =
-      req.body.deviceInfo?.deviceId ||
+      req.body.deviceInfo?.deviceId ??
       Buffer.from(`${ip}-${userAgent}-${Date.now()}`).toString('base64');
 
     return {
       deviceId,
-      deviceType: req.body.deviceInfo?.deviceType || result.device.type || 'web',
-      deviceName: req.body.deviceInfo?.deviceName || result.device.model || userAgent,
-      platform: req.body.deviceInfo?.platform || result.os.name || 'web',
-      browserName: req.body.deviceInfo?.browserName || result.browser.name || 'unknown',
-      browserVersion: req.body.deviceInfo?.browserVersion || result.browser.version || 'unknown',
+      deviceType: req.body.deviceInfo?.deviceType ?? result.device.type ?? 'web',
+      deviceName: req.body.deviceInfo?.deviceName ?? result.device.model ?? userAgent,
+      platform: req.body.deviceInfo?.platform ?? result.os.name ?? 'web',
+      browserName: req.body.deviceInfo?.browserName ?? result.browser.name ?? 'unknown',
+      browserVersion: req.body.deviceInfo?.browserVersion ?? result.browser.version ?? 'unknown',
       ipAddress: ip,
       location: req.body.deviceInfo?.location,
     };

@@ -55,6 +55,9 @@ export enum ErrorCode {
   CACHE_MISS = 9002,
   CACHE_INVALID = 9003,
 
+  // Queue Errors (10xxx)
+  QUEUE_ERROR = 10000,
+
   // Whatsapp Message Handling
   MESSAGE_HANDLING_ERROR = 8090,
 }
@@ -65,7 +68,6 @@ export interface ErrorMetadata {
   details?: Record<string, unknown>;
   source?: string;
   timestamp?: Date;
-  channel?: MessageChannel; // Add this line
 }
 
 export interface SerializedError {

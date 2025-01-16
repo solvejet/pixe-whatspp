@@ -11,7 +11,7 @@ const levels = {
 
 // Add explicit return type to the level function
 const level = (): string => {
-  const env = process.env.NODE_ENV || 'development';
+  const env = process.env.NODE_ENV ?? 'development';
   return env === 'development' ? 'debug' : 'warn';
 };
 

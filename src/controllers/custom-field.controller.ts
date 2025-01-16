@@ -121,8 +121,8 @@ export class CustomFieldController {
    * @route GET /api/customers/fields
    */
   public listCustomFields = async (req: ListFieldsRequest, res: Response): Promise<void> => {
-    const page = parseInt(req.query.page || '1', 10);
-    const limit = parseInt(req.query.limit || '10', 10);
+    const page = parseInt(req.query.page ?? '1', 10);
+    const limit = parseInt(req.query.limit ?? '10', 10);
 
     if (isNaN(page) || page < 1) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid page number', 400);

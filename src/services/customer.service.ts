@@ -22,6 +22,8 @@ import { AppError, ErrorCode } from '@/utils/error-service.js';
 import { auditService } from '@/services/audit.service.js';
 import { logger } from '@/utils/logger.js';
 import { Redis } from '@/config/redis.js';
+import { UserModel } from '@/models/user.model.js';
+import { Role } from '@/types/auth.js';
 
 // Define interfaces for populated documents
 
@@ -32,8 +34,6 @@ interface LeanCustomerGroupDocument extends Omit<ICustomerGroupDocument, 'metada
 
 // Base type for schema values
 type SchemaValue = string | number | boolean | Date | Buffer | Types.ObjectId;
-
-// Type for constructor parameters
 type ConstructorParams =
   | string
   | number
@@ -45,10 +45,10 @@ type ConstructorParams =
   | undefined;
 
 // Type definition for constructor functions
-type Constructor = {
+interface Constructor {
   name: string;
   new (...args: ConstructorParams[]): SchemaValue;
-};
+}
 
 // Updated type for mongoose schema fields
 interface MongooseSchemaField {
@@ -94,7 +94,7 @@ export class CustomerService {
       const customerDoc = await CustomerModel.create({
         ...data,
         assignedAdmin: new Types.ObjectId(data.assignedAdmin),
-        groups: data.groups?.map((id) => new Types.ObjectId(id)) || [],
+        groups: data.groups?.map((id) => new Types.ObjectId(id)) ?? [],
       });
 
       const customer = (await customerDoc.populate([
@@ -200,6 +200,38 @@ export class CustomerService {
           error: error instanceof Error ? error.message : 'Unknown error',
         },
       });
+    }
+  }
+
+  /**
+   * Find a customer by their WhatsApp ID
+   * Uses caching for performance optimization
+   */
+  public async findCustomerByWhatsAppId(whatsappId: string): Promise<{ id: string } | null> {
+    try {
+      // Check cache first
+      const cached = await Redis.get(`${this.CACHE_PREFIX}whatsapp:${whatsappId}`);
+      if (cached) {
+        return JSON.parse(cached) as { id: string };
+      }
+
+      const customer = await CustomerModel.findOne({ whatsappId }).select('_id').lean();
+
+      if (!customer) return null;
+
+      const result = { id: customer._id.toString() };
+
+      // Cache the result
+      await Redis.setEx(
+        `${this.CACHE_PREFIX}whatsapp:${whatsappId}`,
+        this.CACHE_TTL,
+        JSON.stringify(result),
+      );
+
+      return result;
+    } catch (error) {
+      logger.error('Error finding customer by WhatsApp ID:', error);
+      return null;
     }
   }
 
@@ -320,18 +352,23 @@ export class CustomerService {
   ): Promise<BatchOperationResult> {
     try {
       const transformedUpdates = updates.map((update) => {
-        const transformedData: Partial<ICustomerDocument> = {
-          name: update.data.name,
-          phoneNumber: update.data.phoneNumber,
-          countryCode: update.data.countryCode,
-          status: update.data.status,
-          customFields: update.data.customFields
-            ? new Map(Object.entries(update.data.customFields))
-            : undefined,
-          metadata: update.data.metadata
-            ? new Map(Object.entries(update.data.metadata))
-            : undefined,
-        };
+        const transformedData: Partial<ICustomerDocument> = {};
+
+        // Only add properties that are defined
+        if (update.data.name !== undefined) transformedData.name = update.data.name;
+        if (update.data.phoneNumber !== undefined)
+          transformedData.phoneNumber = update.data.phoneNumber;
+        if (update.data.countryCode !== undefined)
+          transformedData.countryCode = update.data.countryCode;
+        if (update.data.status !== undefined) transformedData.status = update.data.status;
+
+        if (update.data.customFields) {
+          transformedData.customFields = new Map(Object.entries(update.data.customFields));
+        }
+
+        if (update.data.metadata) {
+          transformedData.metadata = new Map(Object.entries(update.data.metadata));
+        }
 
         if (update.data.assignedAdmin) {
           transformedData.assignedAdmin = new Types.ObjectId(update.data.assignedAdmin);
@@ -375,7 +412,7 @@ export class CustomerService {
     try {
       const group = await CustomerGroupModel.create({
         ...data,
-        metadata: new Map(Object.entries(data.metadata || {})),
+        metadata: new Map(Object.entries(data.metadata ?? {})),
       });
 
       const groupId = (group._id as Types.ObjectId).toString();
@@ -405,7 +442,7 @@ export class CustomerService {
     try {
       const group = await CustomerGroupModel.findByIdAndUpdate(
         id,
-        { $set: { ...data, metadata: new Map(Object.entries(data.metadata || {})) } },
+        { $set: { ...data, metadata: new Map(Object.entries(data.metadata ?? {})) } },
         { new: true, runValidators: true },
       );
 
@@ -640,14 +677,32 @@ export class CustomerService {
   }
 
   /**
-   * Format customer response with proper type casting
+   * Format customer response with proper type casting and validation
+   * @private
    */
   private formatCustomerResponse(customer: PopulatedCustomerDocument): CustomerResponse {
+    // Validate required fields
+    if (!customer._id || !customer.assignedAdmin) {
+      throw new AppError(
+        ErrorCode.DATA_INTEGRITY_ERROR,
+        'Missing required customer fields',
+        500,
+        false,
+        {
+          details: {
+            hasId: !!customer._id,
+            hasAdmin: !!customer.assignedAdmin,
+          },
+        },
+      );
+    }
+
     return {
       id: customer._id.toString(),
       name: customer.name,
       phoneNumber: customer.phoneNumber,
       countryCode: customer.countryCode,
+      whatsappId: customer.whatsappId,
       assignedAdmin: {
         id: customer.assignedAdmin._id.toString(),
         email: customer.assignedAdmin.email,
@@ -668,6 +723,56 @@ export class CustomerService {
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Get default admin for customer assignment
+   * This function returns the first available admin or the least loaded admin
+   */
+  public async getDefaultAdmin(): Promise<Types.ObjectId> {
+    try {
+      // Get the admin with the least number of assigned customers
+      const adminWithLeastLoad = await UserModel.aggregate([
+        { $match: { roles: Role.ADMIN, isActive: true } },
+        {
+          $lookup: {
+            from: 'customers',
+            localField: '_id',
+            foreignField: 'assignedAdmin',
+            as: 'customers',
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            customerCount: { $size: '$customers' },
+          },
+        },
+        { $sort: { customerCount: 1 } },
+        { $limit: 1 },
+      ]);
+
+      if (adminWithLeastLoad.length === 0) {
+        // If no admin found, throw an error
+        throw new AppError(
+          ErrorCode.RESOURCE_NOT_FOUND,
+          'No active admin users found in the system',
+          500,
+          false,
+        );
+      }
+
+      return adminWithLeastLoad[0]._id;
+    } catch (error) {
+      logger.error('Error getting default admin:', error);
+      throw error instanceof AppError
+        ? error
+        : new AppError(ErrorCode.INTERNAL_SERVER_ERROR, 'Failed to get default admin', 500, false, {
+            details: {
+              error: error instanceof Error ? error.message : 'Unknown error',
+            },
+          });
+    }
   }
 
   /**

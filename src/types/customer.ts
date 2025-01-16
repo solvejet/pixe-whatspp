@@ -51,6 +51,7 @@ export interface ICustomer extends WithTimestamps {
   name: string;
   phoneNumber: string;
   countryCode: string;
+  whatsappId?: string;
   assignedAdmin: Types.ObjectId;
   status: CustomerStatus;
   customFields: DynamicFields;
@@ -128,13 +129,14 @@ export interface CustomerResponse {
   name: string;
   phoneNumber: string;
   countryCode: string;
+  whatsappId?: string | undefined; // Make explicitly optional
   assignedAdmin: {
     id: string;
     email: string;
     firstName: string;
     lastName: string;
   };
-  status: CustomerStatus; // Using the enum here
+  status: CustomerStatus;
   customFields: Record<string, unknown>;
   groups: Array<{
     id: string;
@@ -165,7 +167,7 @@ export interface CustomFieldBase {
 export interface CustomerGroupResponse {
   id: string;
   name: string;
-  description?: string;
+  description?: string | undefined;
   customFields: CustomField[];
   customersCount: number;
   metadata: Record<string, unknown>;
@@ -180,6 +182,7 @@ export interface CreateCustomerRequest {
   name: string;
   phoneNumber: string;
   countryCode: string;
+  whatsappId?: string;
   assignedAdmin: string;
   status?: CustomerStatus;
   customFields?: Record<string, unknown>;

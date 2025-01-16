@@ -75,9 +75,9 @@ class App {
         skip: (req: Request) => req.ip === '127.0.0.1',
         keyGenerator: (req: Request) => {
           return (
-            req.headers['x-forwarded-for']?.toString() ||
-            req.ip ||
-            req.socket.remoteAddress ||
+            req.headers['x-forwarded-for']?.toString() ??
+            req.ip ??
+            req.socket.remoteAddress ??
             'unknown'
           );
         },

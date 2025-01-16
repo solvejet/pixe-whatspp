@@ -1,3 +1,5 @@
+// src/middleware/multer.middleware.ts
+
 import multer from 'multer';
 import crypto from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
@@ -42,7 +44,7 @@ const storage = multer.memoryStorage();
 function generateSecureFilename(originalname: string): string {
   const timestamp = Date.now();
   const randomString = crypto.randomBytes(16).toString('hex');
-  const extension = originalname.split('.').pop()?.toLowerCase() || '';
+  const extension = originalname.split('.').pop()?.toLowerCase() ?? '';
   return `${timestamp}-${randomString}.${extension}`;
 }
 

@@ -155,3 +155,56 @@ curl -X  POST \
     ]
   }
 }'
+
+
+Get Template List
+curl -X  POST \ 
+ 'https://graph.facebook.com/v21.0/{{waba-id}}/message_templates'
+
+ This is the response we Get
+
+ [
+    {
+        "name": "hello_world",
+        "components": [
+            {
+                "type": "BODY",
+                "text": "Hello, {{1}}"
+            }
+        ],
+        "language": "en_US",
+        "status": "APPROVED",
+        "category": "ISSUE_RESOLUTION",
+        "id": "409119052980796"
+    },
+    {
+        "name": "case_opened",
+        "components": [
+            {
+                "type": "BODY",
+                "text": "Seu caso {{1}} foi aberto. Entraremos em contato em breve."
+            }
+        ],
+        "language": "pt_BR",
+        "status": "APPROVED",
+        "category": "TICKET_UPDATE",
+        "id": "718173718589371"
+    },
+    {
+        "name": "case_opened",
+        "components": [
+            {
+                "type": "BODY",
+                "text": "Your case {{1}} was opened. We will get in touch soon."
+            }
+        ],
+        "language": "en_US",
+        "status": "APPROVED",
+        "category": "TICKET_UPDATE",
+        "id": "755551981307120"
+    }
+]
+
+ Get Template by name
+curl -X  POST \ 
+ 'https://graph.facebook.com/v21.0/{{waba-id}}/message_templates?name=%3CTEMPLATE_NAME%3E'

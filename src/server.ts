@@ -122,7 +122,7 @@ class ServerManager {
   /**
    * Start primary process
    */
-  private async startPrimary(): Promise<void> {
+  private startPrimary(): void {
     logger.info(`Primary ${process.pid} is running`);
     logger.info(`Total CPU cores available: ${os.cpus().length}`);
     logger.info(`Starting ${this.numCPUs} workers...`);

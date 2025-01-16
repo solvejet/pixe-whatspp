@@ -193,7 +193,7 @@ export function errorResponse(
   message = 'An error occurred',
   statusCode?: number,
 ): Response {
-  const errStatusCode = statusCode || getErrorStatusCode(error);
+  const errStatusCode = statusCode ?? getErrorStatusCode(error);
   const errors = formatErrorDetails(error);
 
   const response: ApiErrorResponse = {

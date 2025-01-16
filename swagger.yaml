@@ -1,28 +1,25 @@
-openapi: 3.0.3
+openapi: 3.0.0
 info:
-  title: Customer Management API
-  description: |
-    API documentation for the Customer Management System with authentication, 
-    customer management, custom fields, and media handling capabilities.
+  title: Enterprise Backend API
+  description: API documentation for the Enterprise Backend System
   version: 1.0.0
   contact:
-    name: API Support
-    email: support@example.com
+    name: Development Team
+    email: dev@example.com
 
 servers:
-  - url: /api/v1
-    description: API Version 1
+  - url: http://localhost:4000/api/v1
+    description: Development server
+  - url: https://api.example.com/v1
+    description: Production server
 
-# Security Schemes
 components:
   securitySchemes:
-    bearerAuth:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token for authentication
-  
-  # Reusable schemas for requests/responses
+
   schemas:
     Error:
       type: object
@@ -47,7 +44,7 @@ components:
                 type: string
               details:
                 type: object
-    
+
     Success:
       type: object
       properties:
@@ -59,7 +56,6 @@ components:
         data:
           type: object
 
-    # Auth Schemas
     LoginRequest:
       type: object
       required:
@@ -73,7 +69,49 @@ components:
           type: string
           minLength: 8
         deviceInfo:
-          $ref: '#/components/schemas/DeviceInfo'
+          type: object
+          properties:
+            deviceId:
+              type: string
+            deviceType:
+              type: string
+            deviceName:
+              type: string
+            platform:
+              type: string
+            browserName:
+              type: string
+            browserVersion:
+              type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+            roles:
+              type: array
+              items:
+                type: string
+            permissions:
+              type: array
+              items:
+                type: string
+        expiresIn:
+          type: number
 
     RegisterRequest:
       type: object
@@ -89,15 +127,10 @@ components:
         password:
           type: string
           minLength: 8
-          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
         firstName:
           type: string
-          minLength: 2
-          maxLength: 50
         lastName:
           type: string
-          minLength: 2
-          maxLength: 50
         roles:
           type: array
           items:
@@ -105,7 +138,7 @@ components:
             enum: [admin, staff, user]
         deviceInfo:
           $ref: '#/components/schemas/DeviceInfo'
-    
+
     DeviceInfo:
       type: object
       properties:
@@ -121,54 +154,7 @@ components:
           type: string
         browserVersion:
           type: string
-        location:
-          type: string
 
-    AuthResponse:
-      type: object
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        user:
-          $ref: '#/components/schemas/UserResponse'
-        expiresIn:
-          type: integer
-          description: Token expiration time in seconds
-
-    UserResponse:
-      type: object
-      properties:
-        _id:
-          type: string
-        email:
-          type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
-        roles:
-          type: array
-          items:
-            type: string
-        permissions:
-          type: array
-          items:
-            type: string
-        isActive:
-          type: boolean
-        lastLogin:
-          type: string
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    # Customer Schemas
     CustomerRequest:
       type: object
       required:
@@ -179,8 +165,6 @@ components:
       properties:
         name:
           type: string
-          minLength: 2
-          maxLength: 100
         phoneNumber:
           type: string
           pattern: '^\+?[1-9]\d{1,14}$'
@@ -189,141 +173,40 @@ components:
           pattern: '^[A-Z]{2}$'
         assignedAdmin:
           type: string
-          format: uuid
         status:
           type: string
           enum: [active, inactive, pending, blocked]
         customFields:
           type: object
-          additionalProperties: true
         groups:
           type: array
           items:
             type: string
-            format: uuid
         tags:
           type: array
           items:
             type: string
         metadata:
           type: object
-          additionalProperties: true
 
-    CustomerResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        phoneNumber:
-          type: string
-        countryCode:
-          type: string
-        assignedAdmin:
-          type: object
-          properties:
-            id:
-              type: string
-            email:
-              type: string
-            firstName:
-              type: string
-            lastName:
-              type: string
-        status:
-          type: string
-        customFields:
-          type: object
-        groups:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-              name:
-                type: string
-        tags:
-          type: array
-          items:
-            type: string
-        lastActivity:
-          type: string
-          format: date-time
-        metadata:
-          type: object
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    # Custom Fields Schemas
-    CustomFieldRequest:
+    WhatsAppMessage:
       type: object
       required:
-        - name
+        - to
         - type
+        - content
       properties:
-        name:
+        to:
           type: string
-          pattern: '^[a-zA-Z][a-zA-Z0-9_]*$'
+          pattern: '^\+?[1-9]\d{1,14}$'
         type:
           type: string
-          enum: [text, number, date, boolean, list]
-        required:
-          type: boolean
-        listOptions:
-          type: array
-          items:
-            type: string
-        defaultValue:
+          enum: [text, image, video, audio, document, location, template]
+        content:
           type: object
-        description:
-          type: string
-        validation:
+        variables:
           type: object
-          properties:
-            min:
-              type: number
-            max:
-              type: number
-            pattern:
-              type: string
-            message:
-              type: string
 
-    CustomFieldResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        type:
-          type: string
-        required:
-          type: boolean
-        listOptions:
-          type: array
-          items:
-            type: string
-        defaultValue:
-          type: object
-        description:
-          type: string
-        validation:
-          type: object
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    # Media Schemas
     MediaUploadResponse:
       type: object
       properties:
@@ -333,186 +216,56 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, uploading, uploaded, failed, deleted]
-        type:
-          type: string
-          enum: [image, video, audio, document]
-        url:
-          type: string
-
-    MediaResponse:
-      type: object
-      properties:
-        id:
-          type: string
-        originalName:
-          type: string
-        mimeType:
-          type: string
-        size:
-          type: number
         type:
           type: string
         url:
           type: string
-        status:
-          type: string
-        uploadedBy:
-          type: string
-        error:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
 
-# Global Security
-security:
-  - bearerAuth: []
-
-# API Paths
 paths:
-  # Auth Routes
-  /auth/register:
+  # Customer Group Endpoints
+  /customers/groups:
     post:
       tags:
-        - Authentication
-      summary: Register a new user
-      security: []
+        - Customer Groups
+      summary: Create customer group
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                customFields:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CustomField'
+                metadata:
+                  type: object
       responses:
         '201':
-          description: User registered successfully
+          description: Customer group created
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/AuthResponse'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Email already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/CustomerGroupResponse'
 
-  /auth/login:
-    post:
-      tags:
-        - Authentication
-      summary: User login
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Login successful
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/AuthResponse'
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '423':
-          description: Account locked
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /auth/refresh-token:
-    post:
-      tags:
-        - Authentication
-      summary: Refresh access token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - refreshToken
-              properties:
-                refreshToken:
-                  type: string
-      responses:
-        '200':
-          description: Token refreshed successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/AuthResponse'
-        '401':
-          description: Invalid refresh token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /auth/logout:
-    post:
-      tags:
-        - Authentication
-      summary: User logout
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - refreshToken
-              properties:
-                refreshToken:
-                  type: string
-                allDevices:
-                  type: boolean
-      responses:
-        '200':
-          description: Logout successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Success'
-
-  # Customer Routes
-  /customers:
     get:
       tags:
-        - Customers
-      summary: List customers
+        - Customer Groups
+      summary: List customer groups
+      security:
+        - BearerAuth: []
       parameters:
         - in: query
           name: page
@@ -527,114 +280,203 @@ paths:
             minimum: 1
             maximum: 100
             default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
       responses:
         '200':
-          description: List of customers
+          description: List of customer groups
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          customers:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/CustomerResponse'
-                          total:
-                            type: integer
-                          pages:
-                            type: integer
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomerGroupResponse'
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
 
-    post:
-      tags:
-        - Customers
-      summary: Create customer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerRequest'
-      responses:
-        '201':
-          description: Customer created successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/CustomerResponse'
-
-  /customers/{id}:
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-    get:
-      tags:
-        - Customers
-      summary: Get customer by ID
-      responses:
-        '200':
-          description: Customer details
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/CustomerResponse'
-        '404':
-          description: Customer not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
+  /customers/groups/{id}:
     put:
       tags:
-        - Customers
-      summary: Update customer
+        - Customer Groups
+      summary: Update customer group
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CustomerRequest'
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 100
+                description:
+                  type: string
+                  maxLength: 500
+                customFields:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CustomField'
+                metadata:
+                  type: object
       responses:
         '200':
-          description: Customer updated successfully
+          description: Customer group updated
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/CustomerResponse'
+                $ref: '#/components/schemas/CustomerGroupResponse'
 
     delete:
       tags:
-        - Customers
-      summary: Delete customer
+        - Customer Groups
+      summary: Delete customer group
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       responses:
         '204':
-          description: Customer deleted successfully
+          description: Customer group deleted
 
-  # Custom Fields Routes
+    get:
+      tags:
+        - Customer Groups
+      summary: Get customer group by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerGroupResponse'
+
+  /customers/groups/{id}/customers:
+    post:
+      tags:
+        - Customer Groups
+      summary: Add customers to group
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerIds
+              properties:
+                customerIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 100
+      responses:
+        '200':
+          description: Customers added to group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerGroupResponse'
+
+    delete:
+      tags:
+        - Customer Groups
+      summary: Remove customers from group
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerIds
+              properties:
+                customerIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 100
+      responses:
+        '200':
+          description: Customers removed from group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerGroupResponse'
+
+  # Custom Field Endpoints
   /customers/fields:
+    post:
+      tags:
+        - Custom Fields
+      summary: Create custom field
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomFieldRequest'
+      responses:
+        '201':
+          description: Custom field created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldResponse'
+
     get:
       tags:
         - Custom Fields
       summary: List custom fields
+      security:
+        - BearerAuth: []
       parameters:
         - in: query
           name: page
@@ -655,107 +497,24 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          fields:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/CustomFieldResponse'
-                          total:
-                            type: integer
-                          pages:
-                            type: integer
-
-    post:
-      tags:
-        - Custom Fields
-      summary: Create custom field
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomFieldRequest'
-      responses:
-        '201':
-          description: Custom field created successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/CustomFieldResponse'
-
-  /customers/fields/{fieldId}:
-    parameters:
-      - in: path
-        name: fieldId
-        required: true
-        schema:
-          type: string
-    get:
-      tags:
-        - Custom Fields
-      summary: Get custom field by ID
-      responses:
-        '200':
-          description: Custom field details
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/CustomFieldResponse'
-        '404':
-          description: Custom field not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    put:
-      tags:
-        - Custom Fields
-      summary: Update custom field
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomFieldRequest'
-      responses:
-        '200':
-          description: Custom field updated successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/CustomFieldResponse'
-
-    delete:
-      tags:
-        - Custom Fields
-      summary: Delete custom field
-      responses:
-        '204':
-          description: Custom field deleted successfully
+                type: object
+                properties:
+                  fields:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomFieldResponse'
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
 
   /customers/fields/batch:
     patch:
       tags:
         - Custom Fields
       summary: Batch update custom fields
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -779,32 +538,91 @@ paths:
                         $ref: '#/components/schemas/CustomFieldRequest'
       responses:
         '200':
-          description: Custom fields updated successfully
+          description: Custom fields updated
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/CustomFieldResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomFieldResponse'
 
-  # Media Management Routes
+  /customers/fields/{fieldId}:
+    put:
+      tags:
+        - Custom Fields
+      summary: Update custom field
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: fieldId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomFieldRequest'
+      responses:
+        '200':
+          description: Custom field updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldResponse'
+
+    delete:
+      tags:
+        - Custom Fields
+      summary: Delete custom field
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: fieldId
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Custom field deleted
+
+    get:
+      tags:
+        - Custom Fields
+      summary: Get custom field by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: fieldId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Custom field details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldResponse'
+
+  # Media Endpoints
   /media/upload:
     post:
       tags:
         - Media
-      summary: Upload single media file
+      summary: Upload single file
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required:
-                - file
               properties:
                 file:
                   type: string
@@ -815,31 +633,21 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/MediaUploadResponse'
-        '400':
-          description: Invalid file or validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/MediaUploadResponse'
 
   /media/bulk-upload:
     post:
       tags:
         - Media
-      summary: Upload multiple media files
+      summary: Upload multiple files
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required:
-                - files
               properties:
                 files:
                   type: array
@@ -852,68 +660,66 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          successful:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/MediaUploadResponse'
-                          failed:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                originalName:
-                                  type: string
-                                error:
-                                  type: string
+                type: object
+                properties:
+                  successful:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaUploadResponse'
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        originalName:
+                          type: string
+                        error:
+                          type: string
 
   /media/{id}:
-    parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
     get:
       tags:
         - Media
       summary: Get media by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: Media details
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/MediaResponse'
-        '404':
-          description: Media not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/MediaResponse'
 
     delete:
       tags:
         - Media
       summary: Delete media
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       responses:
         '204':
-          description: Media deleted successfully
+          description: Media deleted
 
   /media:
     get:
       tags:
         - Media
       summary: List media files
+      security:
+        - BearerAuth: []
       parameters:
         - in: query
           name: page
@@ -944,27 +750,196 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          media:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/MediaResponse'
-                          total:
-                            type: integer
-                          pages:
-                            type: integer
+                type: object
+                properties:
+                  media:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaResponse'
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
 
-  # Customer Group Routes
-  /customers/groups:
+  # WhatsApp Endpoints
+  /whatsapp/webhook:
     get:
       tags:
-        - Customer Groups
-      summary: List customer groups
+        - WhatsApp
+      summary: Verify webhook
+      parameters:
+        - in: query
+          name: hub.mode
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: hub.verify_token
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: hub.challenge
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook verified
+          content:
+            text/plain:
+              schema:
+                type: string
+
+    post:
+      tags:
+        - WhatsApp
+      summary: Handle webhook events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookPayload'
+      responses:
+        '200':
+          description: Webhook handled successfully
+
+  /whatsapp/messages:
+    post:
+      tags:
+        - WhatsApp
+      summary: Send message
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppMessage'
+      responses:
+        '200':
+          description: Message sent successfully
+
+  /whatsapp/messages/template:
+    post:
+      tags:
+        - WhatsApp
+      summary: Send template message
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - to
+                - templateName
+                - language
+              properties:
+                to:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: Account locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /customers:
+    post:
+      tags:
+        - Customers
+      summary: Create new customer
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Customers
+      summary: List customers
+      security:
+        - BearerAuth: []
       parameters:
         - in: query
           name: page
@@ -983,55 +958,84 @@ paths:
           name: search
           schema:
             type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive, pending, blocked]
       responses:
         '200':
-          description: List of customer groups
+          description: List of customers
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          groups:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/CustomerGroupResponse'
-                          total:
-                            type: integer
-                          pages:
-                            type: integer
+                $ref: '#/components/schemas/Success'
 
+  /whatsapp/messages:
     post:
       tags:
-        - Customer Groups
-      summary: Create customer group
+        - WhatsApp
+      summary: Send WhatsApp message
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CustomerGroupRequest'
+              $ref: '#/components/schemas/WhatsAppMessage'
       responses:
-        '201':
-          description: Customer group created successfully
+        '200':
+          description: Message sent successfully
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        $ref: '#/components/schemas/CustomerGroupResponse'
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  # Customer Batch Operations
-  /customers/batch:
-    patch:
+  /media/upload:
+    post:
       tags:
-        - Customers
-      summary: Batch update customers
+        - Media
+      summary: Upload single file
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadResponse'
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /calls/initiate:
+    post:
+      tags:
+        - Calls
+      summary: Initiate a call
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -1039,107 +1043,1182 @@ paths:
             schema:
               type: object
               required:
-                - updates
+                - customerId
+                - phoneNumber
               properties:
-                updates:
-                  type: array
-                  items:
-                    type: object
-                    required:
-                      - id
-                      - data
-                    properties:
-                      id:
-                        type: string
-                      data:
-                        $ref: '#/components/schemas/CustomerRequest'
+                customerId:
+                  type: string
+                phoneNumber:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                timeLimit:
+                  type: number
+                  minimum: 60
+                  maximum: 3600
       responses:
-        '200':
-          description: Customers updated successfully
+        '201':
+          description: Call initiated successfully
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          ok:
-                            type: integer
-                          modifiedCount:
-                            type: integer
-                          matchedCount:
-                            type: integer
-                          upsertedCount:
-                            type: integer
-                          hasWriteErrors:
-                            type: boolean
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  # Customer Statistics
-  /customers/statistics:
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: Customers
+    description: Customer management endpoints
+  - name: WhatsApp
+    description: WhatsApp messaging endpoints
+  - name: Media
+    description: Media upload and management endpoints
+  - name: Calls
+    description: Call management endpoints
+                templateName:
+                  type: string
+                language:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                variables:
+                  type: object
+      responses:
+        '200':
+          description: Template message sent successfully
+
+  /whatsapp/messages/bulk:
+    post:
+      tags:
+        - WhatsApp
+      summary: Send bulk messages
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messages
+              properties:
+                messages:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/WhatsAppMessage'
+                  maxItems: 100
+      responses:
+        '200':
+          description: Bulk messages sent successfully
+
+  /whatsapp/conversations:
+    get:
+      tags:
+        - WhatsApp
+      summary: List conversations
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, expired, closed]
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [customer_initiated, business_initiated]
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationListResponse'
+
+  /whatsapp/conversations/{id}/messages:
+    get:
+      tags:
+        - WhatsApp
+      summary: Get conversation history
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Conversation history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MessageResponse'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+
+  /whatsapp/conversations/{id}/read:
+    post:
+      tags:
+        - WhatsApp
+      summary: Mark messages as read
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageIds
+              properties:
+                messageIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  maxItems: 100
+      responses:
+        '200':
+          description: Messages marked as read
+
+  /whatsapp/customers/assigned:
+    get:
+      tags:
+        - WhatsApp
+      summary: Get assigned customers
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive, blocked]
+      responses:
+        '200':
+          description: List of assigned customers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerListResponse'
+
+components:
+  schemas:
+    CustomField:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: '^[a-zA-Z][a-zA-Z0-9_]*
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: Account locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /customers:
+    post:
+      tags:
+        - Customers
+      summary: Create new customer
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     get:
       tags:
         - Customers
-      summary: Get customer statistics
+      summary: List customers
+      security:
+        - BearerAuth: []
       parameters:
         - in: query
-          name: fromDate
+          name: page
           schema:
-            type: string
-            format: date-time
+            type: integer
+            minimum: 1
+            default: 1
         - in: query
-          name: toDate
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: search
           schema:
             type: string
-            format: date-time
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive, pending, blocked]
       responses:
         '200':
-          description: Customer statistics
+          description: List of customers
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Success'
-                  - properties:
-                      data:
-                        type: object
-                        properties:
-                          statusDistribution:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                _id:
-                                  type: string
-                                count:
-                                  type: integer
-                          groupDistribution:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                _id:
-                                  type: string
-                                name:
-                                  type: string
-                                count:
-                                  type: integer
-                          timeline:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                _id:
-                                  type: object
-                                  properties:
-                                    year:
-                                      type: integer
-                                    month:
-                                      type: integer
-                                    day:
-                                      type: integer
-                                count:
-                                  type: integer
-                          total:
-                            type: integer
+                $ref: '#/components/schemas/Success'
+
+  /whatsapp/messages:
+    post:
+      tags:
+        - WhatsApp
+      summary: Send WhatsApp message
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppMessage'
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media/upload:
+    post:
+      tags:
+        - Media
+      summary: Upload single file
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadResponse'
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /calls/initiate:
+    post:
+      tags:
+        - Calls
+      summary: Initiate a call
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerId
+                - phoneNumber
+              properties:
+                customerId:
+                  type: string
+                phoneNumber:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                timeLimit:
+                  type: number
+                  minimum: 60
+                  maximum: 3600
+      responses:
+        '201':
+          description: Call initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: Customers
+    description: Customer management endpoints
+  - name: WhatsApp
+    description: WhatsApp messaging endpoints
+  - name: Media
+    description: Media upload and management endpoints
+  - name: Calls
+    description: Call management endpoints
+        type:
+          type: string
+          enum: [text, number, date, boolean, list]
+        required:
+          type: boolean
+          default: false
+        listOptions:
+          type: array
+          items:
+            type: string
+        defaultValue:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+        description:
+          type: string
+          maxLength: 200
+        validation:
+          type: object
+          properties:
+            min:
+              type: number
+            max:
+              type: number
+            pattern:
+              type: string
+            message:
+              type: string
+
+    CustomFieldRequest:
+      allOf:
+        - $ref: '#/components/schemas/CustomField'
+        - type: object
+          properties:
+            required:
+              type: boolean
+            listOptions:
+              type: array
+              items:
+                type: string
+
+    CustomFieldResponse:
+      allOf:
+        - $ref: '#/components/schemas/CustomField'
+        - type: object
+          required:
+            - id
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    CustomerGroupResponse:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        customFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomField'
+        customersCount:
+          type: integer
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MediaResponse:
+      type: object
+      required:
+        - id
+        - originalName
+        - mimeType
+        - size
+        - type
+        - status
+        - uploadedBy
+      properties:
+        id:
+          type: string
+        originalName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        type:
+          type: string
+          enum: [image, video, audio, document]
+        url:
+          type: string
+        status:
+          type: string
+          enum: [pending, uploading, uploaded, failed, deleted]
+        uploadedBy:
+          type: string
+        error:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WebhookPayload:
+      type: object
+      required:
+        - object
+        - entry
+      properties:
+        object:
+          type: string
+          enum: [whatsapp_business_account]
+        entry:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - changes
+            properties:
+              id:
+                type: string
+              changes:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - value
+                    - field
+                  properties:
+                    value:
+                      type: object
+                      required:
+                        - messaging_product
+                        - metadata
+                      properties:
+                        messaging_product:
+                          type: string
+                          enum: [whatsapp]
+                        metadata:
+                          type: object
+                          required:
+                            - display_phone_number
+                            - phone_number_id
+                          properties:
+                            display_phone_number:
+                              type: string
+                            phone_number_id:
+                              type: string
+                        messages:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/WebhookMessage'
+                        statuses:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/WebhookStatus'
+                    field:
+                      type: string
+
+    WebhookMessage:
+      type: object
+      required:
+        - from
+        - id
+        - timestamp
+        - type
+      properties:
+        from:
+          type: string
+        id:
+          type: string
+        timestamp:
+          type: string
+        type:
+          type: string
+          enum: [text, image, video, audio, document, location, interactive, template]
+        text:
+          type: object
+          properties:
+            body:
+              type: string
+        interactive:
+          type: object
+          properties:
+            type:
+              type: string
+            button_reply:
+              type: object
+              properties:
+                id:
+                  type: string
+                title:
+                  type: string
+
+    WebhookStatus:
+      type: object
+      required:
+        - id
+        - status
+        - timestamp
+        - recipient_id
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [sent, delivered, read, failed]
+        timestamp:
+          type: string
+        recipient_id:
+          type: string
+        conversation:
+          type: object
+          properties:
+            id:
+              type: string
+            expiration_timestamp:
+              type: string
+            origin:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [customer_initiated, business_initiated]
+        pricing:
+          type: object
+          properties:
+            billable:
+              type: boolean
+            pricing_model:
+              type: string
+            category:
+              type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: integer
+              title:
+                type: string
+              message:
+                type: string
+              error_data:
+                type: object
+                properties:
+                  details:
+                    type: string
+
+    MessageResponse:
+      type: object
+      required:
+        - id
+        - messageId
+        - from
+        - to
+        - type
+        - status
+        - timestamp
+        - content
+      properties:
+        id:
+          type: string
+        messageId:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        type:
+          type: string
+          enum: [text, image, video, audio, document, location, interactive, template]
+        status:
+          type: string
+          enum: [sent, delivered, read, failed]
+        timestamp:
+          type: string
+          format: date-time
+        content:
+          type: object
+          required:
+            - type
+            - data
+          properties:
+            type:
+              type: string
+            data:
+              type: object
+        metadata:
+          type: object
+
+    ConversationListResponse:
+      type: object
+      required:
+        - conversations
+        - total
+        - page
+        - pages
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationResponse'
+        total:
+          type: integer
+        page:
+          type: integer
+        pages:
+          type: integer
+
+    ConversationResponse:
+      type: object
+      required:
+        - id
+        - customerId
+        - status
+        - type
+        - lastMessageAt
+        - expiresAt
+      properties:
+        id:
+          type: string
+        customerId:
+          type: string
+        status:
+          type: string
+          enum: [active, expired, closed]
+        type:
+          type: string
+          enum: [customer_initiated, business_initiated]
+        lastMessageAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    CustomerListResponse:
+      type: object
+      required:
+        - customers
+        - total
+        - pages
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerResponse'
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    CustomerResponse:
+      type: object
+      required:
+        - id
+        - name
+        - phoneNumber
+        - countryCode
+        - assignedAdmin
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phoneNumber:
+          type: string
+        countryCode:
+          type: string
+        assignedAdmin:
+          type: object
+          required:
+            - id
+            - email
+            - firstName
+            - lastName
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            firstName:
+              type: string
+            lastName:
+              type: string
+        status:
+          type: string
+          enum: [active, inactive, pending, blocked]
+        customFields:
+          type: object
+        groups:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+        tags:
+          type: array
+          items:
+            type: string
+        lastActivity:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '423':
+          description: Account locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /customers:
+    post:
+      tags:
+        - Customers
+      summary: Create new customer
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRequest'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Customers
+      summary: List customers
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive, pending, blocked]
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /whatsapp/messages:
+    post:
+      tags:
+        - WhatsApp
+      summary: Send WhatsApp message
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsAppMessage'
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media/upload:
+    post:
+      tags:
+        - Media
+      summary: Upload single file
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadResponse'
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /calls/initiate:
+    post:
+      tags:
+        - Calls
+      summary: Initiate a call
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerId
+                - phoneNumber
+              properties:
+                customerId:
+                  type: string
+                phoneNumber:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                timeLimit:
+                  type: number
+                  minimum: 60
+                  maximum: 3600
+      responses:
+        '201':
+          description: Call initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: Customers
+    description: Customer management endpoints
+  - name: WhatsApp
+    description: WhatsApp messaging endpoints
+  - name: Media
+    description: Media upload and management endpoints
+  - name: Calls
+    description: Call management endpoints

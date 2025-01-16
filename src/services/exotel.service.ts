@@ -2,7 +2,7 @@
 
 import { env } from '@/config/env.js';
 import { logger } from '@/utils/logger.js';
-import { AppError, ErrorCode } from '@/utils/error-service.js';
+import { AppError, ErrorCode, errorHandler } from '@/utils/error-service.js';
 import { CallStatus, CallType, type ICallDocument, CallModel } from '@/models/call.model.js';
 import type { Types } from 'mongoose';
 
@@ -72,8 +72,8 @@ export class ExotelService {
       formData.append('To', params.to);
       formData.append('CallerId', params.callerId);
       formData.append('Record', 'true');
-      formData.append('RecordingFormat', params.recordingFormat || 'mp3');
-      formData.append('RecordingChannels', params.recordingChannels || 'single');
+      formData.append('RecordingFormat', params.recordingFormat ?? 'mp3');
+      formData.append('RecordingChannels', params.recordingChannels ?? 'single');
       formData.append('StatusCallback', this.statusCallbackUrl);
       formData.append('StatusCallbackContentType', 'application/json');
       formData.append('StatusCallbackEvents[]', 'terminal');
@@ -98,15 +98,13 @@ export class ExotelService {
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const errorData = await response.json();
         throw new AppError(
           ErrorCode.EXTERNAL_API_ERROR,
           'Failed to initiate call',
           response.status,
           true,
-          {
-            details: error,
-          },
+          { details: { errorData } },
         );
       }
 
@@ -130,13 +128,7 @@ export class ExotelService {
       return call;
     } catch (error) {
       logger.error('Error initiating call:', error);
-      throw error instanceof AppError
-        ? error
-        : new AppError(ErrorCode.EXTERNAL_API_ERROR, 'Failed to initiate call', 500, false, {
-            details: {
-              error: error instanceof Error ? error.message : 'Unknown error',
-            },
-          });
+      throw errorHandler.handle(error);
     }
   }
 

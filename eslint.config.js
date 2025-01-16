@@ -42,6 +42,26 @@ export default [
         },
       ],
       'no-undef': 'off', // TypeScript handles this better than ESLint
+      'no-control-regex': 'error', // Add control character check for regex
+      '@typescript-eslint/consistent-type-imports': [
+        'warn',
+        {
+          prefer: 'type-imports',
+        },
+      ],
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-misused-promises': [
+        'warn',
+        {
+          checksVoidReturn: false,
+        },
+      ],
+      'no-return-await': 'off',
+      '@typescript-eslint/return-await': ['warn', 'always'],
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      '@typescript-eslint/prefer-optional-chain': 'warn',
+      'require-await': 'off',
+      '@typescript-eslint/require-await': 'warn',
     },
   },
 ];

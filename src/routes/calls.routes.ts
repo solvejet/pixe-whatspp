@@ -51,11 +51,7 @@ function controllerHandler<T extends Request>(
 /**
  * Verify Exotel webhook signature
  */
-const verifyExotelWebhook = async (
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): Promise<void> => {
+const verifyExotelWebhook = (req: Request, _res: Response, next: NextFunction): void => {
   try {
     if (!isWebhookRequest(req)) {
       throw new AppError(ErrorCode.UNAUTHORIZED, 'Invalid webhook request format', 401, true, {

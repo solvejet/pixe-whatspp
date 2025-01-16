@@ -150,7 +150,7 @@ export class AuthService {
     try {
       // Validate admin/staff role assignment
       if (userData.roles?.some((role) => [Role.ADMIN, Role.STAFF].includes(role))) {
-        if (!currentUser || !currentUser.roles.includes(Role.ADMIN)) {
+        if (!currentUser?.roles.includes(Role.ADMIN)) {
           throw new AppError(
             ErrorCode.INSUFFICIENT_PERMISSIONS,
             'Only administrators can create admin or staff accounts',
@@ -172,7 +172,7 @@ export class AuthService {
       const newUser = await UserModel.create({
         ...userData,
         password: hashedPassword,
-        roles: (userData.roles || [Role.USER]) as Role[],
+        roles: (userData.roles ?? [Role.USER]) as Role[],
         isActive: true,
       });
 
@@ -290,7 +290,7 @@ export class AuthService {
       permissions: user.permissions,
     };
 
-    return jwtService.generateTokens(tokenPayload, {
+    return await jwtService.generateTokens(tokenPayload, {
       ipAddress: authInfo.ipAddress,
       userAgent: authInfo.userAgent,
       deviceId: authInfo.deviceInfo?.deviceId,

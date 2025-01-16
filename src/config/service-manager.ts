@@ -24,11 +24,11 @@ export class ServiceManager extends EventEmitter {
 
   public async initializeServices(): Promise<void> {
     if (this.initPromise) {
-      return this.initPromise;
+      return await this.initPromise;
     }
 
     if (this.isInitializing) {
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         this.once('initialized', resolve);
         this.once('error', reject);
       });
@@ -47,7 +47,7 @@ export class ServiceManager extends EventEmitter {
       this.isInitializing = false;
     }
 
-    return this.initPromise;
+    return await this.initPromise;
   }
 
   private async initialize(): Promise<void> {

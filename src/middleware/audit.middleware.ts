@@ -3,6 +3,7 @@
 import type { Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '@/types/auth.js';
 import { auditService } from '@/services/audit.service.js';
+import { logger } from '@/utils/logger.js';
 
 type ResponseBody = Record<string, unknown> | string;
 type ResponseCallback = undefined | (() => void);
@@ -11,7 +12,7 @@ export const auditMiddleware = (
   action: string,
   category: 'auth' | 'user' | 'system' | 'data' | 'security',
 ) => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     // Store the original end function
     const originalEnd = res.end;
     let responseBody: ResponseBody = '';
@@ -74,26 +75,35 @@ export const auditMiddleware = (
     // After response is sent, log the activity
     res.on('finish', () => {
       if (req.user) {
-        void auditService.log({
-          userId: req.user.userId,
-          action,
-          category,
-          details: {
-            method: req.method,
-            path: req.path,
-            query: req.query,
-            body: req.method !== 'GET' ? req.body : undefined,
-            response: responseBody,
-            statusCode: res.statusCode,
-          },
-          ipAddress:
-            req.ip ||
-            req.headers['x-forwarded-for']?.toString() ||
-            req.socket.remoteAddress ||
-            'unknown',
-          userAgent: req.headers['user-agent'] || 'unknown',
-          status: res.statusCode >= 400 ? 'failure' : 'success',
-        });
+        auditService
+          .log({
+            userId: req.user.userId,
+            action,
+            category,
+            details: {
+              method: req.method,
+              path: req.path,
+              query: req.query,
+              body: req.method !== 'GET' ? req.body : undefined,
+              response: responseBody,
+              statusCode: res.statusCode,
+            },
+            ipAddress:
+              req.ip ??
+              req.headers['x-forwarded-for']?.toString() ??
+              req.socket.remoteAddress ??
+              'unknown',
+            userAgent: req.headers['user-agent'] ?? 'unknown',
+            status: res.statusCode >= 400 ? 'failure' : 'success',
+          })
+          .catch((error) => {
+            logger.error('Failed to log audit event:', {
+              error,
+              action,
+              category,
+              userId: req.user?.userId,
+            });
+          });
       }
     });
   };

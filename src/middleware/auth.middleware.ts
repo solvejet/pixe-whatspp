@@ -92,7 +92,7 @@ function validateDecodedRoles(decoded: DecodedToken): Role[] {
  */
 export const auth: RequestHandler = (async (req: Request, res: Response, next: NextFunction) => {
   const authReq = req as AuthenticatedRequest;
-  return handleAuth(authReq, res, next);
+  return await handleAuth(authReq, res, next);
 }) as RequestHandler;
 
 /**
@@ -157,7 +157,7 @@ function handleCheckRole(
   }
 
   const hasRequiredRole = requiredRoles.some(
-    (role) => req.user?.roles.includes(role) || req.user?.roles.includes(Role.ADMIN),
+    (role) => req.user?.roles.includes(role) ?? req.user?.roles.includes(Role.ADMIN),
   );
 
   if (!hasRequiredRole) {
@@ -246,7 +246,7 @@ async function handleRateLimit(
   windowInSeconds: number,
 ): Promise<void> {
   try {
-    const identifier = req.user?.userId || req.ip || 'unknown';
+    const identifier = req.user?.userId ?? req.ip ?? 'unknown';
     const { isAllowed, remaining } = await checkRateLimit(identifier, max, windowInSeconds);
 
     res.setHeader(RATE_LIMIT_CONSTANTS.HEADER_LIMIT, max.toString());

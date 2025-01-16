@@ -153,7 +153,7 @@ export class AuditService implements IAuditService {
       if (retryCount < this.MAX_RETRIES) {
         logger.warn(`Retrying audit log save. Attempt ${retryCount + 1}/${this.MAX_RETRIES}`);
         await new Promise((resolve) => setTimeout(resolve, 1000 * (retryCount + 1)));
-        return this.saveLog(logData, retryCount + 1);
+        return await this.saveLog(logData, retryCount + 1);
       }
 
       logger.error('Error saving audit log after retries:', error);
@@ -170,7 +170,7 @@ export class AuditService implements IAuditService {
    * Log an audit event
    * Main public interface for the service
    */
-  public async log(params: {
+  public log(params: {
     userId: string;
     action: string;
     category: 'auth' | 'user' | 'system' | 'data' | 'security';
@@ -194,10 +194,10 @@ export class AuditService implements IAuditService {
         details: this.sanitizeDetails(params.details),
         ipAddress: params.ipAddress,
         userAgent: {
-          browser: parsedUA.browser.name || 'unknown',
-          version: parsedUA.browser.version || 'unknown',
-          os: parsedUA.os.name || 'unknown',
-          platform: parsedUA.device.type || 'desktop',
+          browser: parsedUA.browser.name ?? 'unknown',
+          version: parsedUA.browser.version ?? 'unknown',
+          os: parsedUA.os.name ?? 'unknown',
+          platform: parsedUA.device.type ?? 'desktop',
         },
         status: params.status,
         createdAt: new Date(),
@@ -206,13 +206,18 @@ export class AuditService implements IAuditService {
       // Add to queue for batch processing
       this.logQueue.push(logData);
 
-      if (this.logQueue.length >= this.BATCH_SIZE) {
-        void this.flushLogs();
-      } else {
-        this.scheduleFlush();
-      }
+      // Create a promise that resolves when the log is queued or flushed
+      return new Promise<void>((resolve) => {
+        if (this.logQueue.length >= this.BATCH_SIZE) {
+          void this.flushLogs().then(resolve);
+        } else {
+          this.scheduleFlush();
+          resolve();
+        }
+      });
     } catch (error) {
       logger.error('Error queuing audit log:', error);
+      return Promise.reject(error);
     }
   }
 

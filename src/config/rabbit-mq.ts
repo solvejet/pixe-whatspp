@@ -14,7 +14,7 @@ export class RabbitMQService extends EventEmitter {
 
   constructor() {
     super();
-    this.url = process.env.RABBITMQ_URL || 'amqp://localhost';
+    this.url = process.env.RABBITMQ_URL ?? 'amqp://localhost';
   }
 
   public async initialize(): Promise<void> {
@@ -33,7 +33,7 @@ export class RabbitMQService extends EventEmitter {
     }
 
     if (this.connectPromise) {
-      return this.connectPromise;
+      return await this.connectPromise;
     }
 
     this.connectPromise = this.connect();
@@ -68,7 +68,7 @@ export class RabbitMQService extends EventEmitter {
     }
   }
 
-  private async handleConnectionFailure(): Promise<void> {
+  private handleConnectionFailure(): void {
     this.connection = null;
     this.channels.clear();
 
@@ -85,7 +85,7 @@ export class RabbitMQService extends EventEmitter {
   public async createChannel(id: string): Promise<Channel> {
     try {
       const existingChannel = this.channels.get(id);
-      if (existingChannel && existingChannel.connection.connection.serverProperties) {
+      if (existingChannel?.connection.connection.serverProperties) {
         return existingChannel;
       }
 

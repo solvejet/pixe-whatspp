@@ -7,20 +7,21 @@ import os from 'node:os';
 import authRoutes from './auth.routes.js';
 import customerRoutes from './customer.routes.js';
 import customFieldRoutes from './custom-field.routes.js';
-import mediaRoutes from './media.routes.js';
 import callsRoutes from './calls.routes.js';
-import whatsappRoutes from './whatsapp.routes.js';
+import whatsappMediaRoutes from './whatsapp-media.routes.js';
+import whatsappTemplateRoutes from './whatsapp-template.routes.js';
+import whatsappWebhookRoutes from './whatsapp-webhook.routes.js';
 
 import { auth, checkRole } from '@/middleware/auth.middleware.js';
 import { notFound } from '@/middleware/error-handler.js';
-import express from 'express';
+import type express from 'express';
 import { AppError, ErrorCode } from '@/utils/error-service.js';
-import { rateLimit } from 'express-rate-limit';
 import { logger } from '@/utils/logger.js';
 import { Role } from '@/types/auth.js';
+import { env } from '@/config/env.js';
 
 /**
- * Interface definitions for type safety and documentation
+ * Interface definitions for responses
  */
 interface HealthCheckResponse {
   status: 'ok' | 'error';
@@ -46,8 +47,7 @@ interface SystemInfoResponse {
 }
 
 /**
- * Initialize router with strict routing and case sensitive options
- * for better performance and security
+ * Initialize router with security options
  */
 const router: ExpressRouter = Router({
   strict: true,
@@ -55,55 +55,64 @@ const router: ExpressRouter = Router({
 });
 
 /**
- * Rate limiting configuration with enhanced security options
+ * Security headers configuration
  */
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: false, // Count successful requests against the rate limit
-  message: {
-    status: 'error',
-    message: 'Too many requests from this IP, please try again later.',
+const helmetConfig = {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
   },
-  keyGenerator: (req) => {
-    // Use X-Forwarded-For header if behind a proxy, fallback to IP
-    return (
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
-      req.ip ||
-      req.socket.remoteAddress ||
-      'unknown'
-    );
+  crossOriginEmbedderPolicy: true,
+  crossOriginOpenerPolicy: true,
+  crossOriginResourcePolicy: { policy: 'same-site' },
+  dnsPrefetchControl: true,
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
   },
-});
+  ieNoOpen: true,
+  noSniff: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  xssFilter: true,
+} as const;
 
-router.use(helmet());
+// Apply security headers
+router.use(helmet(helmetConfig));
 
 /**
  * Health Check Endpoint
- * Used for monitoring and load balancer checks
- * Returns detailed system health information
  */
-router.get('/health', (_req: Request, res: Response<HealthCheckResponse>) => {
+router.get('/health', (_req: Request, res: Response<HealthCheckResponse>): void => {
   try {
     const memoryUsage = process.memoryUsage();
 
     const healthData: HealthCheckResponse = {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
+      version: process.env.npm_package_version ?? '1.0.0',
+      environment: env.NODE_ENV,
       memoryUsage: {
-        heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024), // MB
-        heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024), // MB
-        external: Math.round(memoryUsage.external / 1024 / 1024), // MB
-        rss: Math.round(memoryUsage.rss / 1024 / 1024), // MB
+        heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+        external: Math.round(memoryUsage.external / 1024 / 1024),
+        rss: Math.round(memoryUsage.rss / 1024 / 1024),
       },
       uptime: process.uptime(),
     };
 
-    // Cache the response for 1 minute
+    // Cache health check response
     res.set('Cache-Control', 'public, max-age=60');
     res.status(200).json(healthData);
   } catch (error) {
@@ -111,14 +120,9 @@ router.get('/health', (_req: Request, res: Response<HealthCheckResponse>) => {
     res.status(500).json({
       status: 'error',
       timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
-      memoryUsage: {
-        heapUsed: 0,
-        heapTotal: 0,
-        external: 0,
-        rss: 0,
-      },
+      version: process.env.npm_package_version ?? '1.0.0',
+      environment: env.NODE_ENV,
+      memoryUsage: { heapUsed: 0, heapTotal: 0, external: 0, rss: 0 },
       uptime: 0,
     });
   }
@@ -126,14 +130,12 @@ router.get('/health', (_req: Request, res: Response<HealthCheckResponse>) => {
 
 /**
  * System Information Endpoint
- * Protected endpoint for getting system information
- * Requires admin role
  */
 router.get(
   '/system-info',
   auth,
   checkRole([Role.ADMIN]),
-  (_req: Request, res: Response<SystemInfoResponse>) => {
+  (_req: Request, res: Response<SystemInfoResponse>): void => {
     try {
       const systemInfo: SystemInfoResponse = {
         nodeVersion: process.version,
@@ -158,25 +160,29 @@ router.get(
   },
 );
 
-// API version prefix
-const API_VERSION = process.env.API_VERSION || '/v1';
+// API Routes with version prefix
+const API_VERSION = env.API_VERSION;
 
-// Public routes (no authentication required)
-router.use(`${API_VERSION}/auth`, apiLimiter, authRoutes);
+// Auth routes
+router.use(`${API_VERSION}/auth`, authRoutes);
 
-// Protected routes (require authentication)
-router.use(`${API_VERSION}/whatsapp`, apiLimiter, whatsappRoutes);
-router.use(`${API_VERSION}/customers`, apiLimiter, customerRoutes);
-router.use(`${API_VERSION}/customers/fields`, apiLimiter, customFieldRoutes);
-router.use(`${API_VERSION}/media`, apiLimiter, mediaRoutes);
-router.use(`${API_VERSION}/calls`, apiLimiter, callsRoutes);
+// Webhook routes
+router.use(`${API_VERSION}/webhooks/whatsapp`, whatsappWebhookRoutes);
+router.use(`${API_VERSION}/webhooks/calls`, callsRoutes);
 
-// Catch-all route for undefined endpoints
-router.all('*', (req: Request, _res: Response, next: NextFunction) => {
+// Protected routes
+router.use(`${API_VERSION}/customers`, customerRoutes);
+router.use(`${API_VERSION}/customers/fields`, customFieldRoutes);
+router.use(`${API_VERSION}/calls`, callsRoutes);
+router.use(`${API_VERSION}/whatsapp/media`, whatsappMediaRoutes);
+router.use(`${API_VERSION}/whatsapp/templates`, whatsappTemplateRoutes);
+
+// 404 Handler for undefined routes
+router.all('*', (req: Request, _res: Response, next: NextFunction): void => {
   next(new AppError(ErrorCode.RESOURCE_NOT_FOUND, `Cannot ${req.method} ${req.originalUrl}`, 404));
 });
 
-// Handle 404 routes - use as middleware
+// Global 404 handler
 router.use('*', notFound as express.RequestHandler);
 
 export default router;

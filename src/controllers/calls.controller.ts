@@ -69,8 +69,8 @@ export class CallsController {
       staffId: new Types.ObjectId(userId),
       customField: req.body.customField,
       timeLimit: req.body.timeLimit,
-      recordingFormat: req.body.recordingFormat || env.EXOTEL_RECORDING_FORMAT,
-      recordingChannels: req.body.recordingChannels || env.EXOTEL_RECORDING_CHANNELS,
+      recordingFormat: req.body.recordingFormat ?? env.EXOTEL_RECORDING_FORMAT,
+      recordingChannels: req.body.recordingChannels ?? env.EXOTEL_RECORDING_CHANNELS,
     });
 
     successResponse(res, { call }, 'Call initiated successfully', 201);

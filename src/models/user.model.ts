@@ -53,7 +53,7 @@ const userSchema = new Schema<IUserDocument>(
 );
 
 userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password);
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Add method to sync permissions

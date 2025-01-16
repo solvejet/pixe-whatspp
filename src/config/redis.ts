@@ -13,7 +13,7 @@ import type { SessionData } from '@/types/redis.js';
 
 type RedisClient = RedisClientType<RedisDefaultModules, RedisFunctions, RedisScripts>;
 type RedisValue = string | number | Buffer;
-type RedisCommandFunction = (...args: unknown[]) => unknown;
+type RedisCommandFunction = (...args: unknown[]) => Promise<unknown>;
 
 class RedisService {
   private client: RedisClient;
@@ -47,7 +47,7 @@ class RedisService {
 
   public async multi(): Promise<ReturnType<RedisClient['multi']>> {
     try {
-      return this.client.multi();
+      return await Promise.resolve(this.client.multi());
     } catch (error) {
       logger.error('Redis multi error:', error);
       throw error;
@@ -62,12 +62,12 @@ class RedisService {
       const multi = this.client.multi();
 
       // Validate and execute commands
-      commands.forEach(([command, ...args]) => {
+      commands.forEach(async ([command, ...args]) => {
         const cmd = command as keyof typeof multi;
         const redisCommand = multi[cmd] as RedisCommandFunction;
 
         if (typeof redisCommand === 'function') {
-          redisCommand.apply(multi, args);
+          await redisCommand.apply(multi, args);
         } else {
           throw new Error(`Invalid Redis command: ${command}`);
         }
@@ -96,12 +96,12 @@ class RedisService {
       const pipeline = this.client.multi();
 
       // Validate and execute commands
-      commands.forEach(([command, ...args]) => {
+      commands.forEach(async ([command, ...args]) => {
         const cmd = command as keyof typeof pipeline;
         const redisCommand = pipeline[cmd] as RedisCommandFunction;
 
         if (typeof redisCommand === 'function') {
-          redisCommand.apply(pipeline, args);
+          await redisCommand.apply(pipeline, args);
         } else {
           throw new Error(`Invalid Redis command: ${command}`);
         }

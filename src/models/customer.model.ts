@@ -1,6 +1,6 @@
 // src/models/customer.model.ts
-import { Schema, model, Types } from 'mongoose';
-import type { Model, Query } from 'mongoose';
+import { Schema, model } from 'mongoose';
+import type { Model, Query, Types } from 'mongoose';
 import type {
   ICustomerDocument,
   ICustomerGroupDocument,
@@ -91,14 +91,6 @@ interface CustomerReport {
 interface DateRangeQuery {
   $gte?: Date;
   $lte?: Date;
-}
-
-interface AggregateMatchStage {
-  createdAt?: {
-    $gte: Date;
-    $lte: Date;
-  };
-  status?: CustomerStatus;
 }
 
 /**
@@ -197,6 +189,12 @@ const customerSchema = new Schema<ICustomerDocument>(
     phoneNumber: {
       type: String,
       required: true,
+      trim: true,
+    },
+    whatsappId: {
+      type: String,
+      sparse: true,
+      index: true,
       trim: true,
     },
     countryCode: {
@@ -372,7 +370,7 @@ function validateFieldValue(value: unknown, field: CustomField): void {
         if (!regex.test(value)) {
           throw new AppError(
             ErrorCode.VALIDATION_ERROR,
-            field.validation.message || `${field.name} does not match required pattern`,
+            field.validation.message ?? `${field.name} does not match required pattern`,
             400,
             true,
             { details: { fieldName: field.name, pattern: field.validation.pattern } },
@@ -468,6 +466,7 @@ async function validateCustomFields(
 
 // Indexes
 customerSchema.index({ phoneNumber: 1, countryCode: 1 }, { unique: true });
+customerSchema.index({ phoneNumber: 1, whatsappId: 1 });
 customerSchema.index({ status: 1, createdAt: -1 });
 customerSchema.index({ assignedAdmin: 1, status: 1 });
 customerSchema.index({ groups: 1, status: 1 });
@@ -478,11 +477,7 @@ customerSchema.index({ createdAt: -1 });
  * Static methods
  */
 customerSchema.statics = {
-  async getByGroup(
-    groupId: Types.ObjectId,
-    page = 1,
-    limit = 10,
-  ): Promise<Array<ICustomerDocument>> {
+  getByGroup(groupId: Types.ObjectId, page = 1, limit = 10): Promise<Array<ICustomerDocument>> {
     return this.find({ groups: groupId })
       .populate('assignedAdmin', 'email firstName lastName')
       .populate('groups', 'name')
@@ -491,11 +486,7 @@ customerSchema.statics = {
       .limit(limit);
   },
 
-  async findByStatus(
-    status: CustomerStatus,
-    page = 1,
-    limit = 10,
-  ): Promise<Array<ICustomerDocument>> {
+  findByStatus(status: CustomerStatus, page = 1, limit = 10): Promise<Array<ICustomerDocument>> {
     return this.find({ status })
       .populate('assignedAdmin', 'email firstName lastName')
       .populate('groups', 'name')
@@ -504,7 +495,7 @@ customerSchema.statics = {
       .limit(limit);
   },
 
-  async search(criteria: {
+  search(criteria: {
     query?: string;
     status?: CustomerStatus;
     groupId?: Types.ObjectId;
@@ -540,172 +531,44 @@ customerSchema.statics = {
       .populate('groups', 'name')
       .sort({ createdAt: -1 });
   },
+};
 
-  async batchUpdate(
-    updates: Array<{
-      id: Types.ObjectId;
-      data: Partial<ICustomerDocument>;
-    }>,
-  ): Promise<{
-    ok: number;
-    modifiedCount: number;
-    matchedCount: number;
-    upsertedCount: number;
-    upsertedIds: { [key: number]: Types.ObjectId };
-    insertedCount: number;
-    insertedIds: { [key: number]: Types.ObjectId };
-    hasWriteErrors: boolean;
-  }> {
-    const bulkOps = updates.map(({ id, data }) => ({
-      updateOne: {
-        filter: { _id: id },
-        update: { $set: data },
-        runValidators: true,
-      },
-    }));
-
-    try {
-      const result = await this.bulkWrite(bulkOps);
-
-      // Return standardized result with correct properties
-      return {
-        ok: 1, // MongoDB success indicator
-        modifiedCount: result.modifiedCount,
-        matchedCount: result.matchedCount,
-        upsertedCount: result.upsertedCount,
-        upsertedIds: result.upsertedIds,
-        insertedCount: result.insertedCount,
-        insertedIds: result.insertedIds,
-        hasWriteErrors: result.hasWriteErrors(),
-      };
-    } catch (error) {
-      throw new AppError(ErrorCode.DATABASE_ERROR, 'Batch update failed', 500, true, {
-        details: {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          updates: updates.map((u) => u.id.toString()),
-        },
-      });
-    }
+// Instance methods
+customerSchema.methods = {
+  updateLastActivity(): Promise<ICustomerDocument> {
+    this.lastActivity = new Date();
+    return this.save();
   },
 
-  async getStatistics(dateRange?: { start: Date; end: Date }): Promise<CustomerStatistics> {
-    const matchStage: AggregateMatchStage = {};
-    if (dateRange) {
-      matchStage.createdAt = {
-        $gte: dateRange.start,
-        $lte: dateRange.end,
-      };
-    }
-
-    const [statusStats, groupStats, timeline] = await Promise.all([
-      // Status distribution
-      this.aggregate([
-        { $match: matchStage },
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 },
-          },
-        },
-      ]),
-
-      // Group distribution
-      this.aggregate([
-        { $match: matchStage },
-        { $unwind: '$groups' },
-        {
-          $group: {
-            _id: '$groups',
-            count: { $sum: 1 },
-          },
-        },
-        {
-          $lookup: {
-            from: 'customergroups',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'groupInfo',
-          },
-        },
-        { $unwind: '$groupInfo' },
-        {
-          $project: {
-            name: '$groupInfo.name',
-            count: 1,
-          },
-        },
-      ]),
-
-      // Timeline
-      this.aggregate([
-        { $match: matchStage },
-        {
-          $group: {
-            _id: {
-              year: { $year: '$createdAt' },
-              month: { $month: '$createdAt' },
-              day: { $dayOfMonth: '$createdAt' },
-            },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
-      ]),
-    ]);
-
-    return {
-      statusDistribution: statusStats,
-      groupDistribution: groupStats,
-      timeline,
-      total: await this.countDocuments(matchStage),
-    };
+  addTags(tags: string[]): Promise<ICustomerDocument> {
+    const uniqueTags = [...new Set([...this.tags, ...tags])];
+    this.tags = uniqueTags;
+    return this.save();
   },
 
-  async generateReport(options: {
-    groupBy?: 'status' | 'group' | 'admin';
-    dateRange?: { start: Date; end: Date };
-    includeInactive?: boolean;
-  }): Promise<CustomerReport[]> {
-    const matchStage: AggregateMatchStage = {};
+  removeTags(tags: string[]): Promise<ICustomerDocument> {
+    this.tags = this.tags.filter((currentTag: string) => !tags.includes(currentTag));
+    return this.save();
+  },
 
-    if (options.dateRange) {
-      matchStage.createdAt = {
-        $gte: options.dateRange.start,
-        $lte: options.dateRange.end,
-      };
-    }
-
-    if (!options.includeInactive) {
-      matchStage.status = CustomerStatus.ACTIVE;
-    }
-
-    // Define proper group stage type
-    const groupStage: {
-      $group: {
-        _id: string | null;
-        total: { $sum: number };
-      };
-    } = {
-      $group: {
-        _id: null,
-        total: { $sum: 1 },
-      },
-    };
-
-    // Set _id based on groupBy option
-    switch (options.groupBy) {
-      case 'status':
-        groupStage.$group._id = '$status';
+  manageGroups(
+    groupIds: Types.ObjectId[],
+    operation: 'add' | 'remove' | 'set',
+  ): Promise<ICustomerDocument> {
+    switch (operation) {
+      case 'add':
+        this.groups = [...new Set([...this.groups, ...groupIds])];
         break;
-      case 'group':
-        groupStage.$group._id = '$groups';
+      case 'remove':
+        this.groups = this.groups.filter(
+          (existingGroupId: Types.ObjectId) => !groupIds.some((id) => id.equals(existingGroupId)),
+        );
         break;
-      case 'admin':
-        groupStage.$group._id = '$assignedAdmin';
+      case 'set':
+        this.groups = groupIds;
         break;
     }
-
-    return this.aggregate([{ $match: matchStage }, groupStage, { $sort: { total: -1 } }]);
+    return this.save();
   },
 };
 
@@ -713,23 +576,23 @@ customerSchema.statics = {
  * Instance methods
  */
 customerSchema.methods = {
-  async updateLastActivity(): Promise<ICustomerDocument> {
+  updateLastActivity(): ICustomerDocument {
     this.lastActivity = new Date();
     return this.save();
   },
 
-  async addTags(tags: string[]): Promise<ICustomerDocument> {
+  addTags(tags: string[]): Promise<ICustomerDocument> {
     const uniqueTags = [...new Set([...this.tags, ...tags])];
     this.tags = uniqueTags;
     return this.save();
   },
 
-  async removeTags(tags: string[]): Promise<ICustomerDocument> {
+  removeTags(tags: string[]): Promise<ICustomerDocument> {
     this.tags = this.tags.filter((currentTag: string) => !tags.includes(currentTag));
     return this.save();
   },
 
-  async manageGroups(
+  manageGroups(
     groupIds: Types.ObjectId[],
     operation: 'add' | 'remove' | 'set',
   ): Promise<ICustomerDocument> {

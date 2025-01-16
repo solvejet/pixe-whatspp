@@ -141,7 +141,7 @@ customFieldSchema.pre('save', function (next): void {
             if (!regex.test(this.defaultValue)) {
               throw new AppError(
                 ErrorCode.VALIDATION_ERROR,
-                this.validation.message || 'Default value does not match the required pattern',
+                this.validation.message ?? 'Default value does not match the required pattern',
                 400,
               );
             }

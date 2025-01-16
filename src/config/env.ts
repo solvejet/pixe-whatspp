@@ -35,6 +35,7 @@ const envSchema = z.object({
   // Rate Limiting
   RATE_LIMIT_WINDOW: z.coerce.number().default(900000), // 15 minutes in ms
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+  RATE_LIMIT_WHITELIST: z.string().default('127.0.0.1,::1'),
 
   // Server Configuration
   MAX_WORKERS: z.coerce.number().default(0), // 0 means use all available CPUs
